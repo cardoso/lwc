@@ -5,15 +5,25 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
 import path from 'path';
-import { rollup } from 'rollup';
+import { rollup, type RollupOptions } from 'rollup';
 
 import lwc from '../../index';
+
+const runRollup = async (options: RollupOptions) => {
+    if (typeof options.external !== 'function') {
+        options.external = ['lwc', options.external ?? []].flat();
+    }
+
+    const bundle = await rollup(options);
+
+    return bundle;
+};
 
 describe('rootDir', () => {
     it('warns if an "input" array is passed and when "rootDir" is not set', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: [
                 path.resolve(__dirname, 'fixtures/entryA.js'),
                 path.resolve(__dirname, 'fixtures/entryB.js'),
@@ -37,7 +47,7 @@ describe('rootDir', () => {
     it('warns if an "input" object is passed and when "rootDir" is not set', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: {
                 entryA: path.resolve(__dirname, 'fixtures/entryA.js'),
                 entryB: path.resolve(__dirname, 'fixtures/entryB.js'),

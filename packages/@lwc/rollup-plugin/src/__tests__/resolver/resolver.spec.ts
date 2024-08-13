@@ -6,16 +6,26 @@
  */
 import path from 'path';
 import fs from 'fs';
-import { rollup } from 'rollup';
+import { rollup, type RollupOptions } from 'rollup';
 import nodeResolve from '@rollup/plugin-node-resolve';
 
 import lwc from '../../index';
+
+const runRollup = async (options: RollupOptions) => {
+    if (typeof options.external !== 'function') {
+        options.external = ['lwc', options.external ?? []].flat();
+    }
+
+    const bundle = await rollup(options);
+
+    return bundle;
+};
 
 describe('resolver', () => {
     it('should be capable to resolve all the base LWC module imports', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/lwc-modules/lwc-modules.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -27,7 +37,7 @@ describe('resolver', () => {
     });
 
     it('should use lwc.config.json to resolve LWC modules', async () => {
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/lwc-config-json/src/index.js'),
             plugins: [lwc()],
         });
@@ -44,7 +54,7 @@ describe('resolver', () => {
     it('should properly resolve LWC module with implicit template', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/implicit-html/implicit-html.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -58,7 +68,7 @@ describe('resolver', () => {
     it('should properly resolve LWC module with implicit stylesheet', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/implicit-css/implicit-css.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -72,7 +82,7 @@ describe('resolver', () => {
     it("should ignore module that can't be resolved by LWC module resolver", async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/unknown-module/unknown-module.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -89,7 +99,7 @@ describe('resolver', () => {
     it('should properly resolve modules with @rollup/rollup-node-resolve and third-party package', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/third-party-import/src/main.js'),
             plugins: [lwc(), nodeResolve()],
             onwarn(warning) {
@@ -103,7 +113,7 @@ describe('resolver', () => {
     it('should properly handle non-component class', async () => {
         const warnings: any = [];
 
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/non-component-class/src/main.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -131,7 +141,7 @@ describe('resolver', () => {
     it('should properly resolve scoped styles with another plugin', async () => {
         const warnings: any = [];
 
-        await rollup({
+        await runRollup({
             input: path.resolve(__dirname, 'fixtures/scoped-styles/src/main.js'),
             plugins: [
                 lwc(),
@@ -165,7 +175,7 @@ describe('resolver', () => {
     it('should emit a warning when import stylesheet file is missing', async () => {
         const warnings: any = [];
 
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/missing-css/missing-css.js'),
             plugins: [lwc()],
             onwarn(warning) {
@@ -185,7 +195,7 @@ describe('resolver', () => {
     });
 
     it('should resolve the namespace and name to the alias value', async () => {
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/namespace/src/index.js'),
             plugins: [lwc()],
         });
@@ -202,7 +212,7 @@ describe('resolver', () => {
     });
 
     it('should use directory to resolve the namespace and name for invalid alias specifier', async () => {
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/namespace/src/invalid.js'),
             plugins: [lwc()],
         });
@@ -233,7 +243,7 @@ describe('resolver', () => {
     });
 
     it('should resolve inherited template for JavaScript component [#4233]', async () => {
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/inherited-templates/src/javascript.js'),
             plugins: [lwc()],
         });
@@ -247,7 +257,7 @@ describe('resolver', () => {
     });
 
     it('should resolve inherited template for TypeScript component [#4233]', async () => {
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/inherited-templates/src/typescript.ts'),
             plugins: [lwc()],
         });

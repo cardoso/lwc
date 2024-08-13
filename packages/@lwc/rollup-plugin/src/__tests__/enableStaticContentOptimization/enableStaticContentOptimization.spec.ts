@@ -8,30 +8,31 @@ import path from 'node:path';
 import { rollup, RollupLog } from 'rollup';
 import lwc, { RollupLwcOptions } from '../../index';
 
+async function runRollup(
+    pathname: string,
+    options: RollupLwcOptions
+): Promise<{ code: string; warnings: RollupLog[] }> {
+    const warnings: RollupLog[] = [];
+    const bundle = await rollup({
+        input: path.resolve(__dirname, pathname),
+        external: ['lwc'],
+        plugins: [lwc(options)],
+        onwarn(warning) {
+            warnings.push(warning);
+        },
+    });
+
+    const { output } = await bundle.generate({
+        format: 'esm',
+    });
+
+    return {
+        code: output[0].code,
+        warnings,
+    };
+}
+
 describe('enableStaticContentOptimization: ', () => {
-    async function runRollup(
-        pathname: string,
-        options: RollupLwcOptions
-    ): Promise<{ code: string; warnings: RollupLog[] }> {
-        const warnings: RollupLog[] = [];
-        const bundle = await rollup({
-            input: path.resolve(__dirname, pathname),
-            plugins: [lwc(options)],
-            onwarn(warning) {
-                warnings.push(warning);
-            },
-        });
-
-        const { output } = await bundle.generate({
-            format: 'esm',
-        });
-
-        return {
-            code: output[0].code,
-            warnings,
-        };
-    }
-
     const configs = [
         {
             name: 'undefined',

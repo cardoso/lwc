@@ -10,30 +10,31 @@ import { APIVersion, HIGHEST_API_VERSION, LOWEST_API_VERSION } from '@lwc/shared
 
 import lwc, { RollupLwcOptions } from '../../index';
 
+async function runRollup(
+    pathname: string,
+    options: RollupLwcOptions
+): Promise<{ code: string; warnings: RollupLog[] }> {
+    const warnings: RollupLog[] = [];
+    const bundle = await rollup({
+        input: path.resolve(__dirname, pathname),
+        external: ['lwc'],
+        plugins: [lwc(options)],
+        onwarn(warning) {
+            warnings.push(warning);
+        },
+    });
+
+    const { output } = await bundle.generate({
+        format: 'esm',
+    });
+
+    return {
+        code: output[0].code,
+        warnings,
+    };
+}
+
 describe('API versioning', () => {
-    async function runRollup(
-        pathname: string,
-        options: RollupLwcOptions
-    ): Promise<{ code: string; warnings: RollupLog[] }> {
-        const warnings: RollupLog[] = [];
-        const bundle = await rollup({
-            input: path.resolve(__dirname, pathname),
-            plugins: [lwc(options)],
-            onwarn(warning) {
-                warnings.push(warning);
-            },
-        });
-
-        const { output } = await bundle.generate({
-            format: 'esm',
-        });
-
-        return {
-            code: output[0].code,
-            warnings,
-        };
-    }
-
     it('uses highest API version by default', async () => {
         const { code, warnings } = await runRollup('fixtures/basic/basic.js', {});
         expect(code).toContain(`apiVersion: ${HIGHEST_API_VERSION}`);

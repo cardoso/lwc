@@ -5,9 +5,20 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
 import path from 'path';
-import { rollup, RollupLog } from 'rollup';
+import { rollup, RollupLog, type RollupOptions } from 'rollup';
 import { APIVersion } from '@lwc/shared';
+
 import lwc from '../../index';
+
+const runRollup = async (options: RollupOptions) => {
+    if (typeof options.external !== 'function') {
+        options.external = ['lwc', options.external ?? []].flat();
+    }
+
+    const bundle = await rollup(options);
+
+    return bundle;
+};
 
 function normalizeLog(log: RollupLog) {
     return {
@@ -30,7 +41,7 @@ function normalizeLog(log: RollupLog) {
 describe('warnings', () => {
     it('should emit a warning for double </template> tags in older API versions', async () => {
         const warnings: RollupLog[] = [];
-        const bundle = await rollup({
+        const bundle = await runRollup({
             input: path.resolve(__dirname, 'fixtures/test/test.js'),
             plugins: [
                 lwc({
