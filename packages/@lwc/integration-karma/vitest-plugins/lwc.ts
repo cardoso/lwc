@@ -18,7 +18,7 @@ import {
     DISABLE_SYNTHETIC_SHADOW_SUPPORT_IN_COMPILER,
     API_VERSION,
     DISABLE_STATIC_CONTENT_OPTIMIZATION,
-} from './shared/options';
+} from '../vitest-config/browser/shared/options';
 
 import type { Plugin as VitestPlugin } from 'vitest/config';
 
@@ -31,6 +31,14 @@ export default function lwcPreprocessor(): VitestPlugin {
         name: 'vitest-plugin-lwc-preprocessor',
         enforce: 'pre',
         resolveId(source, importer) {
+            if (source === 'test-utils') {
+                return path.resolve(__dirname, '../vitest-helpers/test-utils.ts');
+            }
+
+            if (source === 'lwc') {
+                return;
+            }
+
             if (!importer) {
                 return;
             }

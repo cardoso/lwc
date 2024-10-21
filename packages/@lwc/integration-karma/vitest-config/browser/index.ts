@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: MIT
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
+
+import * as testerScripts from './testerScripts';
 import type { ViteUserConfig } from 'vitest/config';
 import type { RemoteOptions } from 'webdriverio';
 
@@ -28,7 +30,7 @@ export const STANDARD_BROWSERS: Record<string, RemoteOptions['capabilities']> = 
         browserName: 'chrome',
         browserVersion: 'latest',
         'goog:chromeOptions': {
-            args: ['--no-sandbox', '--disable-dev-shm-usage'],
+            args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-extensions'],
         },
     },
     firefox: {
@@ -65,38 +67,28 @@ export const LEGACY_BROWSERS: WebdriverIO.Capabilities[] = [
     },
 ];
 
-export const browser: BrowserConfig = {
+export const test = {
     enabled: true,
     ui: false,
     screenshotFailures: false,
     headless: name !== 'safari',
-    isolate: false,
+    isolate: true,
     name,
     provider: 'webdriverio',
-    testerScripts: [
-        {
-            src: '@lwc/wire-service/dist/index.js',
-            type: 'text/javascript',
-        },
-        {
-            src: '@lwc/engine-dom/dist/index.js',
-            type: 'text/javascript',
-        },
-        // {
-        //     content: `
-        //         import * as LWC from '../../lwc';
-        //         console.log('LWC', {...LWC});
-        //         window.LWC = LWC;
-        //     `,
-        //     type: 'module',
-        // }
-    ],
     providerOptions: {
         strictSSL: false,
         capabilities: {
             ...STANDARD_BROWSERS[name],
             acceptInsecureCerts: true,
+            pageLoadStrategy: 'eager',
             // pageLoadStrategy: 'none',
         },
     },
-};
+    testerScripts: testerScripts.test,
+} as BrowserConfig;
+
+export const hydration = {
+    ...test,
+    isolate: false,
+    testerScripts: testerScripts.hydration,
+} as BrowserConfig;

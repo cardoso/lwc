@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: MIT
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
-import testUtils from './test-utils';
-
-testUtils.setHooks({
+TestUtils.setHooks({
     sanitizeHtmlContent: (content) => content as string,
 });
 
@@ -91,7 +89,7 @@ export function runTest(
     let target = container.querySelector(selector);
 
     let testResult;
-    const consoleSpy = testUtils.spyConsole();
+    const consoleSpy = TestUtils.spyConsole();
 
     if (testConfig.test) {
         const snapshot = testConfig.snapshot ? testConfig.snapshot(target) : {};

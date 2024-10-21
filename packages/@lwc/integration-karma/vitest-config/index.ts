@@ -1,8 +1,16 @@
-import { browser } from './browser';
+import * as browser from './browser';
+import env from './env';
+import type { ViteUserConfig } from 'vitest/config';
 
-const silent = false;
+export const test: ViteUserConfig['test'] = {
+    silent: false,
+    isolate: true,
+    env,
+    browser: browser.test,
+};
 
-export default {
-    silent,
-    browser,
+export const hydration: ViteUserConfig['test'] = {
+    ...test,
+    isolate: false,
+    browser: browser.hydration,
 };

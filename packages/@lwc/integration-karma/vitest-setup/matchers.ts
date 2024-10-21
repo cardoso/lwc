@@ -1,9 +1,9 @@
 import type { MatchersObject, RawMatcherFn } from '@vitest/expect';
 
-function pass() {
+function pass(message: string) {
     return {
         pass: true,
-        message: () => '',
+        message: () => message,
     } as const;
 }
 
@@ -16,53 +16,150 @@ function fail(message: string) {
 
 type ExpectedMessage = string | RegExp;
 
-function expectMessage(actual: string) {
-    return (expected: ExpectedMessage) =>
-        typeof expected === 'string' ? actual === expected : expected.test(actual);
-}
-
-function formatConsoleCall(values: unknown[]) {
-    return values
-        .map((value) => {
-            if (typeof value === 'string') {
-                return value;
-            } else {
-                return String(value);
-            }
-        })
-        .join(' ');
+function formatConsoleCall(args: any[]) {
+    return args.map(String).join(' ');
 }
 
 // TODO [#869]: Improve lookup logWarning doesn't use console.group anymore.
-function consoleDevMatcherFactory(methodName: 'error' | 'warn', expectInProd: boolean = false) {
-    return function (received: () => void, ...expected: ExpectedMessage[]) {
-        const spy = vi.spyOn(console, methodName).withImplementation(() => {}, received);
+function consoleDevMatcherFactory(
+    methodName: 'error' | 'warn',
+    expectInProd: boolean = false
+): RawMatcherFn {
+    return function (actual: () => void, expectedMessages: ExpectedMessage | ExpectedMessage[]) {
+        const { isNot } = this;
 
-        if (!expectInProd && process.env.NODE_ENV === 'production' && spy.mock.calls.length > 0) {
-            return fail(
-                `Expected console.${methodName}() not to be called in production mode, but it was called with the following messages:\n` +
-                    spy.mock.calls.map((call) => formatConsoleCall(call)).join('\n')
-            );
+        if (isNot) {
+            const spy = vi.spyOn(console, methodName);
+            try {
+                actual();
+            } finally {
+                spy.mockReset();
+            }
+
+            const callsArgs = spy.mock.calls;
+            const formattedCalls = callsArgs
+                .map(function (arg) {
+                    return '"' + formatConsoleCall(arg) + '"';
+                })
+                .join(', ');
+
+            if (callsArgs.length === 0) {
+                return {
+                    pass: false,
+                    message: function () {
+                        return (
+                            'Expect console.' + methodName + ' to be called, but was never called.'
+                        );
+                    },
+                };
+            }
+            return {
+                pass: false,
+                message: function () {
+                    return 'Expect no message but received:\n' + formattedCalls;
+                },
+            };
+        } else {
+            function matchMessage(message: string, expectedMessage: ExpectedMessage) {
+                if (typeof expectedMessage === 'string') {
+                    return message === expectedMessage;
+                } else {
+                    return expectedMessage.test(message);
+                }
+            }
+
+            if (!Array.isArray(expectedMessages)) {
+                expectedMessages = [expectedMessages];
+            }
+
+            if (typeof actual !== 'function') {
+                throw new Error('Expected function to throw error.');
+            } else if (
+                expectedMessages.some(function (message) {
+                    return typeof message !== 'string' && !(message instanceof RegExp);
+                })
+            ) {
+                throw new Error(
+                    'Expected a string or a RegExp to compare the thrown error against, or an array of such.'
+                );
+            }
+
+            const spy = vi.spyOn(console, methodName);
+
+            try {
+                actual();
+            } finally {
+                // spy.mockReset();
+            }
+
+            const callsArgs = spy.mock.calls;
+            const formattedCalls = callsArgs
+                .map(function (callArgs) {
+                    return '"' + formatConsoleCall(callArgs) + '"';
+                })
+                .join(', ');
+
+            if (!expectInProd && process.env.NODE_ENV === 'production') {
+                if (callsArgs.length !== 0) {
+                    return fail(
+                        'Expected console.' +
+                            methodName +
+                            ' to never called in production mode, but it was called ' +
+                            callsArgs.length +
+                            ' with ' +
+                            formattedCalls +
+                            '.'
+                    );
+                } else {
+                    return pass(
+                        'Expected console.' + methodName + ' to never called in production mode.'
+                    );
+                }
+            } else {
+                if (callsArgs.length === 0) {
+                    return fail(
+                        'Expected console.' +
+                            methodName +
+                            ' to called with ' +
+                            JSON.stringify(expectedMessages) +
+                            ', but was never called.'
+                    );
+                } else {
+                    if (callsArgs.length !== expectedMessages.length) {
+                        return fail(
+                            'Expected console.' +
+                                methodName +
+                                ' to be called ' +
+                                expectedMessages.length +
+                                ' time(s), but was called ' +
+                                callsArgs.length +
+                                ' time(s).'
+                        );
+                    }
+                    for (let i = 0; i < callsArgs.length; i++) {
+                        const callsArg = callsArgs[i];
+                        const expectedMessage = expectedMessages[i];
+                        const actualMessage = formatConsoleCall(callsArg);
+                        if (!matchMessage(actualMessage, expectedMessage)) {
+                            return fail(
+                                'Expected console.' +
+                                    methodName +
+                                    ' to be called with "' +
+                                    expectedMessage +
+                                    '", but was called with "' +
+                                    actualMessage +
+                                    '".'
+                            );
+                        }
+                    }
+                    return pass(
+                        'Expected console.' +
+                            methodName +
+                            ' to be called with the expected messages.'
+                    );
+                }
+            }
         }
-
-        const pass = spy.mock.calls.some((call) => {
-            const message = formatConsoleCall(call);
-            return expected.flat().some(expectMessage(message));
-        });
-
-        return {
-            pass,
-            message: () => {
-                const message = spy.mock.calls.map((call) => formatConsoleCall(call)).join('\n');
-
-                return pass
-                    ? ''
-                    : `${
-                          `Expected console.${methodName}() to be called with one of the following messages:\n` +
-                          expected.map((message) => `  - ${message}`).join('\n')
-                      }\n\nCalls:\n${message}`;
-            },
-        };
     };
 }
 
@@ -70,11 +167,7 @@ type Callback = () => void;
 type ErrorListener = (callback: Callback) => Error | undefined;
 
 function errorMatcherFactory(errorListener: ErrorListener, expectInProd?: boolean): RawMatcherFn {
-    return function (
-        actual: Callback,
-        expectedErrorCtor: ErrorConstructor,
-        expectedMessage?: ExpectedMessage
-    ) {
+    return function (actual, expectedErrorCtor, expectedMessage) {
         function matchMessage(message: string) {
             if (typeof expectedMessage === 'undefined') {
                 return true;
@@ -100,7 +193,6 @@ function errorMatcherFactory(errorListener: ErrorListener, expectInProd?: boolea
                 expectedErrorCtor = Error;
             } else {
                 // 1 argument provided
-                // @ts-expect-error Error is always defined
                 expectedMessage = expectedErrorCtor;
                 expectedErrorCtor = Error;
             }
@@ -128,7 +220,7 @@ function errorMatcherFactory(errorListener: ErrorListener, expectInProd?: boolea
                         '.'
                 );
             } else {
-                return pass();
+                return pass('Expected function not to throw an error in production mode.');
             }
         } else {
             if (thrown === undefined) {
@@ -150,7 +242,7 @@ function errorMatcherFactory(errorListener: ErrorListener, expectInProd?: boolea
                         '.'
                 );
             } else {
-                return pass();
+                return pass('Expected function to throw the expected error.');
             }
         }
     };
@@ -166,23 +258,16 @@ function directErrorListener(callback: Callback) {
 
 // Listen for errors using window.addEventListener('error')
 function windowErrorListener(callback: Callback) {
-    let error: Error | undefined;
-
+    let error;
     function onError(event: ErrorEvent) {
         event.preventDefault(); // don't log the error
         error = event.error;
     }
 
-    // Prevent jasmine from handling the global error. There doesn't seem to be another
-    // way to disable this behavior: https://github.com/jasmine/jasmine/pull/1860
-    const originalOnError = window.onerror;
-    window.onerror = null;
     window.addEventListener('error', onError);
-
     try {
         callback();
     } finally {
-        window.onerror = originalOnError;
         window.removeEventListener('error', onError);
     }
 
@@ -196,11 +281,9 @@ function windowErrorListener(callback: Callback) {
 //    only be caught with window.addEventListener('error')
 //      - Note native lifecycle callbacks are all thrown asynchronously.
 function customElementCallbackReactionErrorListener(callback: Callback) {
-    const errorListener = lwcRuntimeFlags.DISABLE_NATIVE_CUSTOM_ELEMENT_LIFECYCLE
-        ? directErrorListener
-        : windowErrorListener;
-
-    return errorListener(callback);
+    return lwcRuntimeFlags.DISABLE_NATIVE_CUSTOM_ELEMENT_LIFECYCLE
+        ? directErrorListener(callback)
+        : windowErrorListener(callback);
 }
 
 const customMatchers = {
@@ -220,10 +303,10 @@ const customMatchers = {
         true
     ),
     toBeTrue(received: boolean, message = 'Expected value to be true') {
-        return received === true ? pass() : fail(message);
+        return received === true ? pass(message) : fail(message);
     },
     toBeFalse(received: boolean, message = 'Expected value to be false') {
-        return received === false ? pass() : fail(message);
+        return received === false ? pass(message) : fail(message);
     },
     toHaveSize(received: { length: number }, size: number) {
         const { isNot } = this;

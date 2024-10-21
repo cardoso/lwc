@@ -1,25 +1,4 @@
 import { vi } from 'vitest';
-import { LWC_VERSION } from '@lwc/shared';
-
-import * as testUtils from 'test-utils';
-
-vi.stubGlobal('TestUtils', { ...testUtils });
-
-vi.stubGlobal('process', {
-    env: {
-        NODE_ENV: process.env.NODE_ENV_FOR_TEST || process.env.NODE_ENV,
-        NATIVE_SHADOW: true,
-        ENABLE_ARIA_REFLECTION_GLOBAL_POLYFILL:
-            process.env.ENABLE_ARIA_REFLECTION_GLOBAL_POLYFILL === '1',
-        ENABLE_SYNTHETIC_SHADOW_IN_HYDRATION:
-            process.env.ENABLE_SYNTHETIC_SHADOW_IN_HYDRATION === '1',
-        DISABLE_STATIC_CONTENT_OPTIMIZATION:
-            process.env.DISABLE_STATIC_CONTENT_OPTIMIZATION === '1',
-        LWC_VERSION,
-    },
-});
-
-lwcRuntimeFlags.DISABLE_NATIVE_CUSTOM_ELEMENT_LIFECYCLE = true;
 
 type Procedure = (...args: any[]) => any;
 type Methods<T> = keyof {
@@ -43,7 +22,7 @@ export function spyOn<T, M extends Classes<Required<T>> | Methods<Required<T>>>(
                 return spy.mockReturnValue(value);
             },
             callFake(fn: any) {
-                return spy.mockImplementation(fn);
+                return spy.mockImplementationOnce(fn);
             },
             callThrough() {
                 return spy.mockClear();

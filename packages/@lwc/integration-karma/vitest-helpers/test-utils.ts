@@ -7,7 +7,7 @@
 
 import { HIGHEST_API_VERSION } from '@lwc/shared';
 
-export function expectComposedPath(
+function expectComposedPath(
     event: Event,
     target: EventTarget,
     dispatcher: EventTarget = target
@@ -36,48 +36,43 @@ type ConsoleSpy = {
 
 // TODO [#869]: Replace this custom spy with standard spyOn jasmine spy when logWarning doesn't use console.group
 // anymore. On IE11 console.group has a different behavior when the F12 inspector is attached to the page.
-export function spyConsole(): ConsoleSpy {
-    const originalConsole = window.console;
-
-    const calls: ConsoleCalls = {
-        log: [],
-        warn: [],
-        error: [],
-        group: [],
-        groupEnd: [],
-    };
-
-    window.console = {
-        ...originalConsole,
-        log: function () {
-            calls.log.push(Array.prototype.slice.call(arguments));
-        },
-        warn: function () {
-            calls.warn.push(Array.prototype.slice.call(arguments));
-        },
-        error: function () {
-            calls.error.push(Array.prototype.slice.call(arguments));
-        },
-        group: function () {
-            calls.group.push(Array.prototype.slice.call(arguments));
-        },
-        groupEnd: function () {
-            calls.groupEnd.push(Array.prototype.slice.call(arguments));
-        },
-    };
-
-    function reset() {
-        window.console = originalConsole;
-    }
+function spyConsole(): ConsoleSpy {
+    const warn = vi.spyOn(window.console, 'warn');
+    const error = vi.spyOn(window.console, 'error');
+    const log = vi.spyOn(window.console, 'log');
+    const group = vi.spyOn(window.console, 'group');
+    const groupEnd = vi.spyOn(window.console, 'groupEnd');
 
     return {
-        calls,
-        reset,
+        calls: {
+            get warn() {
+                return warn.mock.calls;
+            },
+            get error() {
+                return error.mock.calls;
+            },
+            get log() {
+                return log.mock.calls;
+            },
+            get group() {
+                return group.mock.calls;
+            },
+            get groupEnd() {
+                return groupEnd.mock.calls;
+            },
+        },
+        reset: () => {
+            warn.mockReset();
+            error.mockReset();
+            log.mockReset();
+            group.mockReset();
+            groupEnd.mockReset();
+        },
     };
 }
 
 // Listen for errors thrown directly by the callback
-export function directErrorListener(callback: () => void) {
+function directErrorListener(callback: () => void) {
     try {
         callback();
     } catch (error) {
@@ -86,8 +81,8 @@ export function directErrorListener(callback: () => void) {
 }
 
 // Listen for errors using window.addEventListener('error')
-export function windowErrorListener(callback: () => void) {
-    let error: unknown;
+function windowErrorListener(callback: () => void) {
+    let error;
     function onError(event: ErrorEvent) {
         event.preventDefault(); // don't log the error
         error = event.error;
@@ -114,7 +109,7 @@ export function windowErrorListener(callback: () => void) {
 // 2) We're using native lifecycle callbacks, so the error is thrown asynchronously and can
 //    only be caught with window.addEventListener('error')
 //      - Note native lifecycle callbacks are all thrown asynchronously.
-export function customElementCallbackReactionErrorListener(callback: () => void) {
+function customElementCallbackReactionErrorListener(callback: () => void) {
     return lwcRuntimeFlags.DISABLE_NATIVE_CUSTOM_ELEMENT_LIFECYCLE
         ? directErrorListener(callback)
         : windowErrorListener(callback);
@@ -142,7 +137,7 @@ export function customElementCallbackReactionErrorListener(callback: () => void)
 //     expect.extend(customMatchers);
 // });
 
-export function extractDataIds(root: Element) {
+function extractDataIds(root: Element) {
     const nodes: Record<string, Node> = {};
 
     function processElement(elm: Element) {
@@ -184,7 +179,7 @@ export function extractDataIds(root: Element) {
     return nodes;
 }
 
-export function extractShadowDataIds(shadowRoot: ShadowRoot) {
+function extractShadowDataIds(shadowRoot: ShadowRoot) {
     const nodes: Record<string, Node> = {};
 
     // Add the shadow root here even if they don't have [data-id] attributes. This reference is
@@ -209,30 +204,30 @@ export function extractShadowDataIds(shadowRoot: ShadowRoot) {
 }
 
 let register: Record<string, CustomElementConstructor> = {};
-export function load(id: string) {
+function load(id: string) {
     return Promise.resolve(register[id]);
 }
 
-export function registerForLoad(name: string, Ctor: CustomElementConstructor) {
+function registerForLoad(name: string, Ctor: CustomElementConstructor) {
     register[name] = Ctor;
 }
-export function clearRegister() {
+function clearRegister() {
     register = {};
 }
 
 // #986 - childNodes on the host element returns a fake shadow comment node on IE11 for debugging purposes. This method
 // filters this node.
-export function getHostChildNodes(host: Node) {
+function getHostChildNodes(host: Node) {
     return Array.prototype.slice.call(host.childNodes).filter(function (n) {
         return !(n.nodeType === Node.COMMENT_NODE && n.tagName.startsWith('#shadow-root'));
     });
 }
 
-export function isSyntheticShadowRootInstance(sr: ShadowRoot) {
+function isSyntheticShadowRootInstance(sr: ShadowRoot) {
     return Boolean(sr && (sr as any).synthetic);
 }
 
-export function isNativeShadowRootInstance(sr: ShadowRoot) {
+function isNativeShadowRootInstance(sr: ShadowRoot) {
     return Boolean(sr && !(sr as any).synthetic);
 }
 
@@ -247,13 +242,13 @@ let sanitizeHtmlContentHook: SanitizeHtmlContentHook = function () {
     throw new Error('sanitizeHtmlContent hook must be implemented.');
 };
 
-export function getHooks() {
+function getHooks() {
     return {
         sanitizeHtmlContent: sanitizeHtmlContentHook,
     };
 }
 
-export function setHooks(hooks: OverridableHooksDef) {
+function setHooks(hooks: OverridableHooksDef) {
     if (!isOverriden) {
         LWC.setHooks({
             sanitizeHtmlContent: function (content) {
@@ -269,7 +264,7 @@ export function setHooks(hooks: OverridableHooksDef) {
 }
 
 // This mapping should be kept up-to-date with the mapping in @lwc/shared -> aria.ts
-export const ariaPropertiesMapping = {
+const ariaPropertiesMapping = {
     ariaAutoComplete: 'aria-autocomplete',
     ariaChecked: 'aria-checked',
     ariaCurrent: 'aria-current',
@@ -325,7 +320,7 @@ export const ariaPropertiesMapping = {
 } as const;
 
 // See the README for @lwc/aria-reflection
-export const nonStandardAriaProperties = [
+const nonStandardAriaProperties = [
     'ariaActiveDescendant',
     'ariaControls',
     'ariaDescribedBy',
@@ -338,7 +333,7 @@ export const nonStandardAriaProperties = [
 
 // These properties are not included in the global polyfill, but were added to LightningElement/BridgeElement
 // prototypes in https://github.com/salesforce/lwc/pull/3702
-export const nonPolyfilledAriaProperties = [
+const nonPolyfilledAriaProperties = [
     'ariaColIndexText',
     'ariaBrailleLabel',
     'ariaBrailleRoleDescription',
@@ -346,11 +341,11 @@ export const nonPolyfilledAriaProperties = [
     'ariaRowIndexText',
 ] as const;
 
-export const ariaProperties = Object.keys(ariaPropertiesMapping);
-export const ariaAttributes = Object.values(ariaPropertiesMapping);
+const ariaProperties = Object.keys(ariaPropertiesMapping);
+const ariaAttributes = Object.values(ariaPropertiesMapping);
 
 // Keep traversing up the prototype chain until a property descriptor is found
-export function getPropertyDescriptor(object: unknown, prop: PropertyKey) {
+function getPropertyDescriptor(object: unknown, prop: PropertyKey) {
     do {
         const descriptor = Object.getOwnPropertyDescriptor(object, prop);
         if (descriptor) {
@@ -360,10 +355,10 @@ export function getPropertyDescriptor(object: unknown, prop: PropertyKey) {
     } while (object);
 }
 
-export const IS_SYNTHETIC_SHADOW_LOADED = !`${ShadowRoot}`.includes('[native code]');
+const IS_SYNTHETIC_SHADOW_LOADED = !`${ShadowRoot}`.includes('[native code]');
 
 // Designed for hydration tests, this helper asserts certain error/warn console messages were logged
-export function createExpectConsoleCallsFunc(devOnly: boolean) {
+function createExpectConsoleCallsFunc(devOnly: boolean) {
     return (consoleCalls: ConsoleCalls, methods: ConsoleCalls) => {
         for (const [method, matchers] of Object.entries(methods)) {
             const calls = consoleCalls[method];
@@ -387,13 +382,13 @@ export function createExpectConsoleCallsFunc(devOnly: boolean) {
     };
 }
 
-export const expectConsoleCalls = createExpectConsoleCallsFunc(false);
-export const expectConsoleCallsDev = createExpectConsoleCallsFunc(true);
+const expectConsoleCalls = createExpectConsoleCallsFunc(false);
+const expectConsoleCallsDev = createExpectConsoleCallsFunc(true);
 
 // Utility to handle unhandled rejections or errors without allowing Jasmine to handle them first.
 // Captures both onunhandledrejection and onerror events, since you might want both depending on
 // native vs synthetic lifecycle timing differences.
-export function catchUnhandledRejectionsAndErrors(
+function catchUnhandledRejectionsAndErrors(
     onUnhandledRejectionOrError: (event: ErrorEvent) => void
 ) {
     let originalOnError: OnErrorEventHandler;
@@ -434,15 +429,15 @@ const apiVersion = process.env.API_VERSION
 
 // These values are based on the API versions in @lwc/shared/api-version
 
-export const LOWERCASE_SCOPE_TOKENS = apiVersion >= 59;
-export const USE_COMMENTS_FOR_FRAGMENT_BOOKENDS = apiVersion >= 60;
-export const USE_FRAGMENTS_FOR_LIGHT_DOM_SLOTS = apiVersion >= 60;
-export const DISABLE_OBJECT_REST_SPREAD_TRANSFORMATION = apiVersion >= 60;
-export const ENABLE_ELEMENT_INTERNALS_AND_FACE = apiVersion >= 61;
-export const USE_LIGHT_DOM_SLOT_FORWARDING = apiVersion >= 61;
-export const ENABLE_THIS_DOT_HOST_ELEMENT = apiVersion >= 62;
-export const ENABLE_THIS_DOT_STYLE = apiVersion >= 62;
-export const TEMPLATE_CLASS_NAME_OBJECT_BINDING = apiVersion >= 62;
+const LOWERCASE_SCOPE_TOKENS = apiVersion >= 59;
+const USE_COMMENTS_FOR_FRAGMENT_BOOKENDS = apiVersion >= 60;
+const USE_FRAGMENTS_FOR_LIGHT_DOM_SLOTS = apiVersion >= 60;
+const DISABLE_OBJECT_REST_SPREAD_TRANSFORMATION = apiVersion >= 60;
+const ENABLE_ELEMENT_INTERNALS_AND_FACE = apiVersion >= 61;
+const USE_LIGHT_DOM_SLOT_FORWARDING = apiVersion >= 61;
+const ENABLE_THIS_DOT_HOST_ELEMENT = apiVersion >= 62;
+const ENABLE_THIS_DOT_STYLE = apiVersion >= 62;
+const TEMPLATE_CLASS_NAME_OBJECT_BINDING = apiVersion >= 62;
 
 // const apiVersionNumber = process.env.API_VERSION
 //     ? parseInt(process.env.API_VERSION, 10)
@@ -471,7 +466,7 @@ type ReportingEventId = Parameters<ReportingDispatcher>[0];
  * @param dispatcher
  * @param runtimeEvents List of runtime events to filter by. If no list is provided, all events will be dispatched.
  */
-export function attachReportingControlDispatcher(
+function attachReportingControlDispatcher(
     dispatcher: ReportingDispatcher,
     runtimeEvents: ReportingEventId[keyof ReportingEventId][]
 ) {
@@ -482,11 +477,12 @@ export function attachReportingControlDispatcher(
     });
 }
 
-export function detachReportingControlDispatcher() {
+function detachReportingControlDispatcher() {
     LWC.__unstable__ReportingControl.detachDispatcher();
 }
 
 const testUtils = {
+    expectComposedPath,
     clearRegister,
     extractDataIds,
     extractShadowDataIds,
@@ -511,16 +507,19 @@ const testUtils = {
     expectConsoleCalls,
     expectConsoleCallsDev,
     catchUnhandledRejectionsAndErrors,
+    LOWERCASE_SCOPE_TOKENS,
+    USE_COMMENTS_FOR_FRAGMENT_BOOKENDS,
+    USE_FRAGMENTS_FOR_LIGHT_DOM_SLOTS,
+    DISABLE_OBJECT_REST_SPREAD_TRANSFORMATION,
+    ENABLE_ELEMENT_INTERNALS_AND_FACE,
+    USE_LIGHT_DOM_SLOT_FORWARDING,
+    ENABLE_THIS_DOT_HOST_ELEMENT,
+    ENABLE_THIS_DOT_STYLE,
+    TEMPLATE_CLASS_NAME_OBJECT_BINDING,
 } as const;
 
 declare global {
     var TestUtils: typeof testUtils;
-
-    interface ProcessEnv {
-        API_VERSION: number;
-    }
 }
 
 window.TestUtils = testUtils;
-
-export default testUtils;
