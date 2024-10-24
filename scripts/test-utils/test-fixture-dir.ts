@@ -8,7 +8,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { glob } from 'glob';
-import { test } from 'vitest';
 import type { Config as StyleCompilerConfig } from '@lwc/style-compiler';
 import type { PathLike } from 'node:fs';
 
@@ -150,11 +149,8 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
     const hasOnly = fixtures.some(({ tester }) => tester.isOnly);
 
     for (const { description, tester, details } of fixtures) {
-        test.concurrent(description, async ({ skip, expect }) => {
-            if (tester.isSkip || (hasOnly && !tester.isOnly)) {
-                skip();
-            }
-
+        const skip = tester.isSkip || (hasOnly && !tester.isOnly);
+        describe(description, { skip }, async (test) => {
             const outputs = await testFn(details);
 
             if (typeof outputs !== 'object' || outputs === null) {
@@ -163,23 +159,17 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
                 );
             }
 
-            await Promise.all(
-                Object.entries(outputs).map(async ([outputName, content]) => {
-                    const outputPath = path.resolve(details.dirname, outputName);
-                    try {
-                        if (content === undefined) {
-                            await expect(exists(outputPath)).resolves.toBe(false);
-                        } else {
-                            await expect(content).toMatchFileSnapshot(outputPath);
-                        }
-                    } catch (e) {
-                        if (typeof e === 'object' && e !== null) {
-                            Error.captureStackTrace(e, testFixtureDir);
-                        }
-                        throw e;
+            for (const [outputName, content] of Object.entries(outputs)) {
+                const outputPath = path.resolve(details.dirname, outputName);
+
+                test.concurrent(outputName, async ({ expect }) => {
+                    if (content === undefined) {
+                        await expect(exists(outputPath)).resolves.toBe(false);
+                    } else {
+                        await expect(content).toMatchFileSnapshot(outputPath);
                     }
-                })
-            );
+                });
+            }
         });
     }
 }
