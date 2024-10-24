@@ -8,8 +8,8 @@ import path from 'node:path';
 import { transformSync } from '@babel/core';
 import { LWC_VERSION, HIGHEST_API_VERSION } from '@lwc/shared';
 import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
+import { describe } from 'vitest';
 import plugin from '../index';
-
 const BASE_OPTS = {
     namespace: 'lwc',
     name: 'test',
@@ -61,7 +61,7 @@ function transform(source: string, opts = {}) {
 }
 
 describe.concurrent('fixtures', async () => {
-    const fixtures = testFixtureDir(
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.js',
@@ -82,9 +82,4 @@ describe.concurrent('fixtures', async () => {
             };
         }
     );
-
-    for await (const fixture of fixtures) {
-        const { tester, description, fn } = fixture;
-        tester(description, fn);
-    }
 });

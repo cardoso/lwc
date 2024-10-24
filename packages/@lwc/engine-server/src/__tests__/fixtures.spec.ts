@@ -11,8 +11,8 @@ import { rollup } from 'rollup';
 import lwcRollupPlugin from '@lwc/rollup-plugin';
 import { vi } from 'vitest';
 import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
+import { describe } from 'vitest';
 import type * as lwc from '../index';
-
 interface FixtureModule {
     tagName: string;
     default: typeof lwc.LightningElement;
@@ -76,8 +76,8 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-async function testFixtures() {
-    const fixtures = testFixtureDir(
+describe.concurrent('fixtures', async () => {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/index.js',
@@ -122,13 +122,4 @@ async function testFixtures() {
             };
         }
     );
-
-    for await (const fixture of fixtures) {
-        const { tester, description, fn } = fixture;
-        tester(description, fn);
-    }
-}
-
-describe.concurrent('fixtures', async () => {
-    await testFixtures();
 });

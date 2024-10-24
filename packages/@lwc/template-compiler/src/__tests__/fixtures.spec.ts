@@ -12,17 +12,17 @@ import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
 import compiler from '../index';
 
 describe.concurrent('fixtures', async () => {
-    const fixtures = testFixtureDir(
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.html',
         },
-        async ({ src, dirname, config }) => {
+        async ({ src, config, dirname }) => {
             const filename = path.basename(dirname);
 
-            config = { namespace: 'x', name: filename, ...config };
+            const cconfig = { namespace: 'x', name: filename, ...config };
 
-            const compiled = compiler(src, filename, config);
+            const compiled = compiler(src, filename, cconfig);
             const { warnings, root } = compiled;
 
             // Replace LWC's version with X.X.X so the snapshots don't frequently change
@@ -42,9 +42,4 @@ describe.concurrent('fixtures', async () => {
             };
         }
     );
-
-    for await (const fixture of fixtures) {
-        const { tester, fn, description } = fixture;
-        tester(description, fn);
-    }
 });

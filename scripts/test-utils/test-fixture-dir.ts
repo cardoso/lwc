@@ -7,8 +7,8 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { globStream } from 'glob';
-import { test, type TestAPI, type TestContext } from 'vitest';
+import { glob } from 'glob';
+import { test } from 'vitest';
 import type { Config as StyleCompilerConfig } from '@lwc/style-compiler';
 import type { PathLike } from 'node:fs';
 
@@ -24,9 +24,9 @@ async function exists(path: PathLike): Promise<boolean> {
     }
 }
 
-const TEST_NORMAL = 0;
+const TEST_SKIP = 0;
 const TEST_ONLY = 1;
-const TEST_SKIP = 2;
+const TEST_NORMAL = 2;
 
 /**
  * Facilitates the use of vitest's `test.only`/`test.skip` in fixture files.
@@ -81,42 +81,34 @@ async function getFixtureConfig<T extends TestFixtureConfig>(dirname: string): P
     return config;
 }
 
-async function* globFixtures<T extends TestFixtureConfig>(
-    pattern: string | string[],
-    root: string
-) {
-    const iter = globStream(pattern, {
+async function globFixtures<T extends TestFixtureConfig>(pattern: string | string[], root: string) {
+    const iter = await glob(pattern, {
         cwd: root,
         absolute: true,
     });
 
-    for await (const filename of iter) {
-        const dirname = path.dirname(filename);
+    return Promise.all(
+        iter.map(async (filename) => {
+            const dirname = path.dirname(filename);
+            const [src, fixtureConfig, tester] = await Promise.all([
+                fs.readFile(filename, 'utf-8'),
+                getFixtureConfig<T>(dirname),
+                getTestFunc(dirname),
+            ]);
 
-        const [src, fixtureConfig, tester] = await Promise.all([
-            fs.readFile(filename, 'utf-8'),
-            getFixtureConfig<T>(dirname),
-            getTestFunc(dirname),
-        ]);
+            const description = fixtureConfig?.description ?? path.relative(root, filename);
 
-        if (tester === TEST_SKIP) {
-            continue;
-        }
-
-        const description = fixtureConfig?.description ?? path.relative(root, filename);
-
-        yield {
-            src,
-            filename,
-            dirname,
-            fixtureConfig,
-            description,
-            tester,
-        };
-    }
+            return {
+                src,
+                filename,
+                dirname,
+                fixtureConfig,
+                description,
+                tester,
+            };
+        })
+    );
 }
-
-type Tester = TestAPI<{ description: string }>['concurrent'];
 
 /**
  * Test a fixture directory against a set of snapshot files. This method generates a test for each
@@ -139,25 +131,20 @@ type Tester = TestAPI<{ description: string }>['concurrent'];
  *   }
  * )
  */
-export async function* testFixtureDir<T extends TestFixtureConfig>(
-    config: { pattern: string; root: string },
-    testFn: (options: {
+export async function testFixtureDir<T extends TestFixtureConfig>(
+    config: {
+        pattern: string;
+        root: string;
+    },
+    testFn: (config: {
         src: string;
+        config: T;
         filename: string;
         dirname: string;
-        config?: Awaited<T>;
     }) => TestFixtureOutput | Promise<TestFixtureOutput>
-): AsyncGenerator<{
-    tester: Tester;
-    description: string;
-    fn: (ctx: TestContext) => Promise<void>;
-}> {
+) {
     if (typeof config !== 'object' || config === null) {
         throw new TypeError(`Expected first argument to be an object`);
-    }
-
-    if (typeof testFn !== 'function') {
-        throw new TypeError(`Expected second argument to be a function`);
     }
 
     const { pattern, root } = config;
@@ -166,37 +153,34 @@ export async function* testFixtureDir<T extends TestFixtureConfig>(
         throw new TypeError(`Expected a "root" and a "pattern" config to be specified`);
     }
 
-    for await (const fixture of globFixtures<T>(pattern, root)) {
-        const { src, filename, dirname, fixtureConfig, description, tester } = fixture;
-        const it = test.extend({ description });
-        yield {
-            tester: tester === TEST_ONLY ? it.concurrent.only : it.concurrent,
-            description,
-            fn: async ({ expect }: TestContext) => {
-                const outputs = await testFn({
-                    src,
-                    filename,
-                    dirname,
-                    config: fixtureConfig,
-                });
+    const fixtures = await globFixtures<T>(pattern, root);
+    const hasOnly = fixtures.some(({ tester }) => tester === TEST_ONLY);
 
-                if (typeof outputs !== 'object' || outputs === null) {
-                    throw new TypeError(
-                        'Expected test function to returns a object with fixtures outputs'
-                    );
-                }
+    test.concurrent.for(fixtures)(
+        '$description',
+        async ({ src, filename, dirname, fixtureConfig, tester }, { skip, expect }) => {
+            if (tester === TEST_SKIP || (hasOnly && tester !== TEST_ONLY)) {
+                skip();
+            }
 
-                await Promise.all(
-                    Object.entries(outputs).map(async ([outputName, content]) => {
-                        const outputPath = path.resolve(dirname, outputName);
-                        if (content === undefined) {
-                            await expect(exists(outputPath)).resolves.toBe(false);
-                        } else {
-                            await expect(content).toMatchFileSnapshot(outputPath);
-                        }
-                    })
+            const outputs = await testFn({ src, config: fixtureConfig, filename, dirname });
+
+            if (typeof outputs !== 'object' || outputs === null) {
+                throw new TypeError(
+                    'Expected test function to returns a object with fixtures outputs'
                 );
-            },
-        };
-    }
+            }
+
+            await Promise.all(
+                Object.entries(outputs).map(async ([outputName, content]) => {
+                    const outputPath = path.resolve(dirname, outputName);
+                    if (content === undefined) {
+                        await expect(exists(outputPath)).resolves.toBe(false);
+                    } else {
+                        await expect(content).toMatchFileSnapshot(outputPath);
+                    }
+                })
+            );
+        }
+    );
 }

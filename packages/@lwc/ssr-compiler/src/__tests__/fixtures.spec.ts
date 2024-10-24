@@ -12,7 +12,7 @@ import lwcRollupPlugin from '@lwc/rollup-plugin';
 import { FeatureFlagName } from '@lwc/features/dist/types';
 import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
 import { serverSideRenderComponent } from '@lwc/ssr-runtime';
-
+import { describe } from 'vitest';
 interface FixtureModule {
     tagName: string;
     default: any;
@@ -55,13 +55,13 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-async function testFixtures() {
-    const fixtures = testFixtureDir(
+describe.concurrent('fixtures', async () => {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, '../../../engine-server/src/__tests__/fixtures'),
             pattern: '**/index.js',
         },
-        async ({ filename, dirname, config }) => {
+        async ({ dirname, filename, config }) => {
             const errorFile = config?.ssrFiles?.error ?? 'error.txt';
             const expectedFile = config?.ssrFiles?.expected ?? 'expected.html';
 
@@ -107,14 +107,4 @@ async function testFixtures() {
             }
         }
     );
-
-    for await (const fixture of fixtures) {
-        const { tester, description, fn } = fixture;
-        tester(description, fn);
-        // Do nothing, the test is handled by the testFixtureDir function
-    }
-}
-
-describe.concurrent('fixtures', async () => {
-    await testFixtures();
 });
