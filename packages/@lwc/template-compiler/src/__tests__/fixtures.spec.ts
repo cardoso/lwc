@@ -11,8 +11,8 @@ import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
 
 import compiler from '../index';
 
-describe('fixtures', () => {
-    testFixtureDir(
+describe.concurrent('fixtures', async () => {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.html',

@@ -76,8 +76,8 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-function testFixtures() {
-    testFixtureDir(
+async function testFixtures() {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/index.js',
@@ -124,6 +124,6 @@ function testFixtures() {
     );
 }
 
-describe.concurrent('fixtures', () => {
-    testFixtures();
+describe.concurrent('fixtures', async () => {
+    await testFixtures();
 });

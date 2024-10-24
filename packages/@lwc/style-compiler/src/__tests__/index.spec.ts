@@ -28,8 +28,8 @@ function normalizeError(err: Error) {
     }
 }
 
-describe('fixtures', () => {
-    testFixtureDir(
+describe.concurrent('fixtures', async () => {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.css',

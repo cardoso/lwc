@@ -60,8 +60,8 @@ function transform(source: string, opts = {}) {
     return code;
 }
 
-describe('fixtures', () => {
-    testFixtureDir(
+describe.concurrent('fixtures', async () => {
+    await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.js',

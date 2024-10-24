@@ -5,13 +5,24 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import * as glob from 'glob';
 import type { Config as StyleCompilerConfig } from '@lwc/style-compiler';
+import type { PathLike } from 'node:fs';
 const { globSync } = glob;
 
 type TestFixtureOutput = { [filename: string]: unknown };
+
+// Like `fs.existsSync` but async
+async function exists(path: PathLike): Promise<boolean> {
+    try {
+        await fs.access(path);
+        return true;
+    } catch (_err) {
+        return false;
+    }
+}
 
 /**
  * Facilitates the use of vitest's `test.only`/`test.skip` in fixture files.
@@ -20,14 +31,16 @@ type TestFixtureOutput = { [filename: string]: unknown };
  * @throws if you have both `.only` and `.skip` in the directory
  * @example getTestFunc('/fixtures/some-test')
  */
-function getTestFunc(dirname: string) {
-    const isOnly = fs.existsSync(path.join(dirname, '.only'));
-    const isSkip = fs.existsSync(path.join(dirname, '.skip'));
+async function getTestFunc(dirname: string) {
+    const [isOnly, isSkip] = await Promise.all([
+        exists(path.join(dirname, '.only')),
+        exists(path.join(dirname, '.skip')),
+    ]);
     if (isOnly && isSkip) {
         const relpath = path.relative(process.cwd(), dirname);
         throw new Error(`Cannot have both .only and .skip in ${relpath}`);
     }
-    return isOnly ? test.only : isSkip ? test.skip : test;
+    return isOnly ? 'only' : isSkip ? 'skip' : undefined;
 }
 
 export interface TestFixtureConfig extends StyleCompilerConfig {
@@ -47,11 +60,13 @@ export interface TestFixtureConfig extends StyleCompilerConfig {
 }
 
 /** Loads the the contents of the `config.json` in the provided directory, if present. */
-function getFixtureConfig<T extends TestFixtureConfig>(dirname: string): T | undefined {
+async function getFixtureConfig<T extends TestFixtureConfig>(
+    dirname: string
+): Promise<T | undefined> {
     const filepath = path.join(dirname, 'config.json');
     let contents: string;
     try {
-        contents = fs.readFileSync(filepath, 'utf8');
+        contents = await fs.readFile(filepath, 'utf8');
     } catch (err) {
         if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
             return undefined;
@@ -82,7 +97,7 @@ function getFixtureConfig<T extends TestFixtureConfig>(dirname: string): T | und
  *   }
  * )
  */
-export function testFixtureDir<T extends TestFixtureConfig>(
+export async function testFixtureDir<T extends TestFixtureConfig>(
     config: { pattern: string; root: string },
     testFn: (options: {
         src: string;
@@ -90,7 +105,7 @@ export function testFixtureDir<T extends TestFixtureConfig>(
         dirname: string;
         config?: T;
     }) => TestFixtureOutput | Promise<TestFixtureOutput>
-) {
+): Promise<void> {
     if (typeof config !== 'object' || config === null) {
         throw new TypeError(`Expected first argument to be an object`);
     }
@@ -110,13 +125,20 @@ export function testFixtureDir<T extends TestFixtureConfig>(
     });
 
     for (const filename of matches) {
-        const src = fs.readFileSync(filename, 'utf-8');
         const dirname = path.dirname(filename);
-        const fixtureConfig = getFixtureConfig<T>(dirname);
+        const [src, fixtureConfig, tester] = await Promise.all([
+            fs.readFile(filename, 'utf-8'),
+            getFixtureConfig<T>(dirname),
+            getTestFunc(dirname),
+        ]);
         const description = fixtureConfig?.description ?? path.relative(root, filename);
-        const tester = getTestFunc(dirname);
 
-        tester(description, async () => {
+        (tester === 'only' ? test.only : test)(description, async ({ skip, expect }) => {
+            if (tester === 'skip') {
+                skip();
+                return;
+            }
+
             const outputs = await testFn({
                 src,
                 filename,
@@ -130,10 +152,15 @@ export function testFixtureDir<T extends TestFixtureConfig>(
                 );
             }
 
-            for (const [outputName, content] of Object.entries(outputs)) {
-                const outputPath = path.resolve(dirname, outputName);
-                expect(content).toMatchFile(outputPath);
-            }
+            await Promise.all(
+                Object.entries(outputs).map(([outputName, content]) => {
+                    const outputPath = path.resolve(dirname, outputName);
+                    if (content === undefined) {
+                        return expect(exists(outputPath)).resolves.toBe(false);
+                    }
+                    return expect(content).toMatchFileSnapshot(outputPath);
+                })
+            );
         });
     }
 }
