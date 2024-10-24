@@ -61,7 +61,7 @@ function transform(source: string, opts = {}) {
 }
 
 describe.concurrent('fixtures', async () => {
-    await testFixtureDir(
+    const fixtures = testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.js',
@@ -82,4 +82,9 @@ describe.concurrent('fixtures', async () => {
             };
         }
     );
+
+    for await (const fixture of fixtures) {
+        const { tester, description, fn } = fixture;
+        tester(description, fn);
+    }
 });

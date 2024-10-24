@@ -12,7 +12,7 @@ import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
 import compiler from '../index';
 
 describe.concurrent('fixtures', async () => {
-    await testFixtureDir(
+    const fixtures = testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.html',
@@ -42,4 +42,9 @@ describe.concurrent('fixtures', async () => {
             };
         }
     );
+
+    for await (const fixture of fixtures) {
+        const { tester, fn, description } = fixture;
+        tester(description, fn);
+    }
 });

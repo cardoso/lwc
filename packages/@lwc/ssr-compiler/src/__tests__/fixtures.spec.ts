@@ -55,8 +55,8 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-function testFixtures() {
-    testFixtureDir(
+async function testFixtures() {
+    const fixtures = testFixtureDir(
         {
             root: path.resolve(__dirname, '../../../engine-server/src/__tests__/fixtures'),
             pattern: '**/index.js',
@@ -107,8 +107,14 @@ function testFixtures() {
             }
         }
     );
+
+    for await (const fixture of fixtures) {
+        const { tester, description, fn } = fixture;
+        tester(description, fn);
+        // Do nothing, the test is handled by the testFixtureDir function
+    }
 }
 
-describe('fixtures', () => {
-    testFixtures();
+describe.concurrent('fixtures', async () => {
+    await testFixtures();
 });

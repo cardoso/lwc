@@ -29,7 +29,7 @@ function normalizeError(err: Error) {
 }
 
 describe.concurrent('fixtures', async () => {
-    await testFixtureDir(
+    const fixtures = testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.css',
@@ -56,4 +56,9 @@ describe.concurrent('fixtures', async () => {
             };
         }
     );
+
+    for await (const fixture of fixtures) {
+        const { tester, fn, description } = fixture;
+        tester(description, fn);
+    }
 });
