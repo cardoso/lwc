@@ -64,16 +64,14 @@ async function getFixtureConfig<T extends TestFixtureConfig>(
     dirname: string
 ): Promise<T | undefined> {
     const filepath = path.join(dirname, 'config.json');
-    let contents: string;
-    try {
-        contents = await fs.readFile(filepath, 'utf8');
-    } catch (err) {
-        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
-            return undefined;
-        }
-        throw err;
+
+    if (!(await exists(filepath))) {
+        return undefined;
     }
-    return JSON.parse(contents);
+
+    const { default: config } = await import(filepath, { with: { type: 'json' } });
+
+    return config;
 }
 
 /**
@@ -126,11 +124,13 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
 
     for (const filename of matches) {
         const dirname = path.dirname(filename);
+
         const [src, fixtureConfig, tester] = await Promise.all([
             fs.readFile(filename, 'utf-8'),
             getFixtureConfig<T>(dirname),
             getTestFunc(dirname),
         ]);
+
         const description = fixtureConfig?.description ?? path.relative(root, filename);
 
         (tester === 'only' ? test.only : test)(description, async ({ skip, expect }) => {
