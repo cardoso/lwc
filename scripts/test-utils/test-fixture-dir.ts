@@ -170,8 +170,15 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
             await Promise.all(
                 Object.entries(outputs).map(async ([outputName, content]) => {
                     const outputPath = path.resolve(details.dirname, outputName);
-                    if (content !== undefined) {
-                        await expect(content).toMatchFileSnapshot(outputPath);
+                    try {
+                        if (content !== undefined) {
+                            await expect(content).toMatchFileSnapshot(outputPath);
+                        }
+                    } catch (e) {
+                        if (typeof e === 'object' && e !== null) {
+                            Error.captureStackTrace(e, testFixtureDir);
+                        }
+                        throw e;
                     }
                 })
             );
