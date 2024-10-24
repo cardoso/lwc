@@ -8,7 +8,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { glob } from 'glob';
-import { test, type ExpectStatic } from 'vitest';
+import { test } from 'vitest';
 import type { Config as StyleCompilerConfig } from '@lwc/style-compiler';
 import type { PathLike } from 'node:fs';
 
@@ -122,10 +122,10 @@ type TestFnDetails<T> = {
  * @example
  * testFixtureDir(
  *   { root: 'fixtures', pattern: '**\/actual.js' },
- *   ({src}) => {
+ *   ({src}, validate) => {
  *     let result, error
  *     try { result = transform(src) } catch (e) { error = e }
- *     return { 'expected.js': result, 'error.txt': error }
+ *     return validate({ 'expected.js': result, 'error.txt': error })
  *   }
  * )
  */
@@ -134,7 +134,10 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
         pattern: string;
         root: string;
     },
-    testFn: (config: TestFnDetails<T>) => TestFixtureOutput | Promise<TestFixtureOutput>
+    testFn: (
+        config: TestFnDetails<T>,
+        validate: (output: TestFixtureOutput) => Promise<void>
+    ) => Promise<void>
 ) {
     if (typeof config !== 'object' || config === null) {
         throw new TypeError(`Expected first argument to be an object`);
@@ -152,31 +155,26 @@ export async function testFixtureDir<T extends TestFixtureConfig>(
     test.concurrent.for(fixtures)('$description', async ({ details, tester }, { skip, expect }) => {
         if (tester.isSkip || (hasOnly && !tester.isOnly)) {
             skip();
+            expect.unreachable();
         }
 
-        const outputs = await testFn(details);
+        expect.hasAssertions();
 
-        if (typeof outputs !== 'object' || outputs === null) {
-            throw new TypeError('Expected test function to returns a object with fixtures outputs');
-        }
-
-        await validateOutputSnapshots(outputs, details.dirname, expect);
-    });
-}
-
-async function validateOutputSnapshots(
-    outputs: TestFixtureOutput,
-    dirname: string,
-    expect: ExpectStatic
-) {
-    await Promise.all(
-        Object.entries(outputs).map(async ([outputName, content]) => {
-            const outputPath = path.resolve(dirname, outputName);
-            if (content === undefined) {
-                await expect(exists(outputPath)).resolves.toBe(false);
-            } else {
-                await expect(content).toMatchFileSnapshot(outputPath);
+        await testFn(details, async (outputs) => {
+            if (typeof outputs !== 'object' || outputs === null) {
+                throw new TypeError(
+                    'Expected test function to returns a object with fixtures outputs'
+                );
             }
-        })
-    );
+
+            await Promise.all(
+                Object.entries(outputs).map(async ([outputName, content]) => {
+                    const outputPath = path.resolve(details.dirname, outputName);
+                    if (content !== undefined) {
+                        await expect(content).toMatchFileSnapshot(outputPath);
+                    }
+                })
+            );
+        });
+    });
 }

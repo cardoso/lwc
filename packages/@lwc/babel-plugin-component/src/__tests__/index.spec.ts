@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
-import path from 'node:path';
+import * as path from 'node:path';
 import { transformSync } from '@babel/core';
 import { LWC_VERSION, HIGHEST_API_VERSION } from '@lwc/shared';
 import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
@@ -60,15 +60,15 @@ function transform(source: string, opts = {}) {
     return code;
 }
 
-describe.concurrent('fixtures', async () => {
+describe('fixtures', async () => {
     await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.js',
         },
-        ({ src, config }) => {
-            let result;
-            let error;
+        ({ src, config }, validate) => {
+            let result: string | undefined;
+            let error: string | undefined;
 
             try {
                 result = transform(src, config);
@@ -76,10 +76,10 @@ describe.concurrent('fixtures', async () => {
                 error = JSON.stringify(normalizeError(err), null, 4);
             }
 
-            return {
+            return validate({
                 'expected.js': result,
                 'error.json': error,
-            };
+            });
         }
     );
 });

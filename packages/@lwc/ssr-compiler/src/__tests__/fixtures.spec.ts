@@ -55,32 +55,32 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-describe.concurrent('fixtures', async () => {
+describe('fixtures', async () => {
     await testFixtureDir(
         {
             root: path.resolve(__dirname, '../../../engine-server/src/__tests__/fixtures'),
             pattern: '**/index.js',
         },
-        async ({ dirname, filename, config }) => {
+        async ({ dirname, filename, config }, validate) => {
             const errorFile = config?.ssrFiles?.error ?? 'error.txt';
             const expectedFile = config?.ssrFiles?.expected ?? 'expected.html';
 
-            let compiledFixturePath;
+            let compiledFixturePath: string | undefined;
             try {
                 compiledFixturePath = await compileFixture({
                     input: filename,
                     dirname,
                 });
             } catch (err: any) {
-                return {
+                return await validate({
                     [errorFile]: err.message,
                     [expectedFile]: '',
-                };
+                });
             }
 
             const module = (await import(compiledFixturePath)) as FixtureModule;
 
-            let result;
+            let result: string | undefined;
             try {
                 result = await serverSideRenderComponent(
                     module!.tagName,
@@ -88,22 +88,22 @@ describe.concurrent('fixtures', async () => {
                     config?.props ?? {}
                 );
             } catch (err: any) {
-                return {
+                return await validate({
                     [errorFile]: err.message,
                     [expectedFile]: '',
-                };
+                });
             }
 
             try {
-                return {
+                return await validate({
                     [errorFile]: '',
                     [expectedFile]: formatHTML(result),
-                };
+                });
             } catch (_err: any) {
-                return {
+                return await validate({
                     [errorFile]: `Test helper could not format HTML:\n\n${result}`,
                     [expectedFile]: '',
-                };
+                });
             }
         }
     );

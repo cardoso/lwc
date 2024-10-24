@@ -5,7 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
 
-import path from 'path';
+import * as path from 'node:path';
 
 import { rollup } from 'rollup';
 import lwcRollupPlugin from '@lwc/rollup-plugin';
@@ -82,7 +82,7 @@ describe.concurrent('fixtures', async () => {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/index.js',
         },
-        async ({ filename, dirname, config }) => {
+        async ({ filename, dirname, config }, validate) => {
             const compiledFixturePath = await compileFixture({
                 input: filename,
                 dirname,
@@ -93,16 +93,19 @@ describe.concurrent('fixtures', async () => {
             // On top of this, the engine also checks if the component constructor is an instance of
             // the LightningElement. Therefor the compiled module should also be evaluated in the
             // same sandbox registry as the engine.
-            const lwcEngineServer = await import('../index');
-            const module = (await import(compiledFixturePath)) as FixtureModule;
+            const [lwcEngineServer, module] = await Promise.all([
+                import('../index'),
+                import(compiledFixturePath) as Promise<FixtureModule>,
+            ]);
 
             const features = module!.features ?? [];
             features.forEach((flag) => {
                 lwcEngineServer!.setFeatureFlagForTest(flag, true);
             });
 
-            let result;
-            let err;
+            let result: string | undefined;
+            let err: string | undefined;
+
             try {
                 result = lwcEngineServer!.renderComponent(
                     module!.tagName,
@@ -112,14 +115,15 @@ describe.concurrent('fixtures', async () => {
             } catch (_err: any) {
                 err = _err.message;
             }
+
             features.forEach((flag) => {
                 lwcEngineServer!.setFeatureFlagForTest(flag, false);
             });
 
-            return {
+            await validate({
                 'expected.html': result ? formatHTML(result) : '',
                 'error.txt': err ?? '',
-            };
+            });
         }
     );
 });

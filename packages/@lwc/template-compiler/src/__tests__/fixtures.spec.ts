@@ -11,13 +11,13 @@ import { testFixtureDir } from '@lwc/test-utils-lwc-internals';
 
 import compiler from '../index';
 
-describe.concurrent('fixtures', async () => {
+describe('fixtures', async () => {
     await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.html',
         },
-        async ({ src, config, dirname }) => {
+        async ({ src, config, dirname }, validate) => {
             const filename = path.basename(dirname);
 
             const cconfig = { namespace: 'x', name: filename, ...config };
@@ -32,14 +32,14 @@ describe.concurrent('fixtures', async () => {
                 'X.X.X'
             );
 
-            return {
+            await validate({
                 'expected.js': await prettier.format(code, {
                     parser: 'babel',
                     trailingComma: 'es5',
                 }),
                 'ast.json': JSON.stringify({ root }, null, 4),
                 'metadata.json': JSON.stringify({ warnings }, null, 4),
-            };
+            });
         }
     );
 });

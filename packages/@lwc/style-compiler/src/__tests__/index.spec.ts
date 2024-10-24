@@ -28,15 +28,15 @@ function normalizeError(err: Error) {
     }
 }
 
-describe.concurrent('fixtures', async () => {
+describe('fixtures', async () => {
     await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.css',
         },
-        ({ src, config, filename }) => {
-            let result;
-            let error;
+        ({ src, config, filename }, validate) => {
+            let result: { code: string } | undefined;
+            let error: string | undefined;
 
             try {
                 result = transform(src, filename, config);
@@ -50,10 +50,10 @@ describe.concurrent('fixtures', async () => {
                 code = code.replace(new RegExp(LWC_VERSION.replace(/\./g, '\\.'), 'g'), 'X.X.X');
             }
 
-            return {
+            return validate({
                 'expected.js': code,
                 'error.json': error,
-            };
+            });
         }
     );
 });
