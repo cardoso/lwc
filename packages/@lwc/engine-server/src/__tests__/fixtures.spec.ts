@@ -76,13 +76,13 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     return outputFile;
 }
 
-describe.concurrent('fixtures', async () => {
+describe('fixtures', async () => {
     await testFixtureDir(
         {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/index.js',
         },
-        async ({ filename, dirname, config }, validate) => {
+        async ({ filename, dirname, config }) => {
             const compiledFixturePath = await compileFixture({
                 input: filename,
                 dirname,
@@ -120,10 +120,10 @@ describe.concurrent('fixtures', async () => {
                 lwcEngineServer!.setFeatureFlagForTest(flag, false);
             });
 
-            await validate({
+            return {
                 'expected.html': result ? formatHTML(result) : '',
                 'error.txt': err ?? '',
-            });
+            };
         }
     );
 });

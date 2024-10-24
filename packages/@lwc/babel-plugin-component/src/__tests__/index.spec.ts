@@ -66,7 +66,7 @@ describe('fixtures', async () => {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.js',
         },
-        ({ src, config }, validate) => {
+        ({ src, config }) => {
             let result: string | undefined;
             let error: string | undefined;
 
@@ -76,10 +76,10 @@ describe('fixtures', async () => {
                 error = JSON.stringify(normalizeError(err), null, 4);
             }
 
-            return validate({
+            return {
                 'expected.js': result,
                 'error.json': error,
-            });
+            };
         }
     );
 });

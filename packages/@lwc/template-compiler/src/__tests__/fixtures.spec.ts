@@ -17,7 +17,7 @@ describe('fixtures', async () => {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.html',
         },
-        async ({ src, config, dirname }, validate) => {
+        async ({ src, config, dirname }) => {
             const filename = path.basename(dirname);
 
             const cconfig = { namespace: 'x', name: filename, ...config };
@@ -32,14 +32,14 @@ describe('fixtures', async () => {
                 'X.X.X'
             );
 
-            await validate({
+            return {
                 'expected.js': await prettier.format(code, {
                     parser: 'babel',
                     trailingComma: 'es5',
                 }),
                 'ast.json': JSON.stringify({ root }, null, 4),
                 'metadata.json': JSON.stringify({ warnings }, null, 4),
-            });
+            };
         }
     );
 });

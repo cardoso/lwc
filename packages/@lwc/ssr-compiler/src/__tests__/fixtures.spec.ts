@@ -61,7 +61,7 @@ describe('fixtures', async () => {
             root: path.resolve(__dirname, '../../../engine-server/src/__tests__/fixtures'),
             pattern: '**/index.js',
         },
-        async ({ dirname, filename, config }, validate) => {
+        async ({ dirname, filename, config }) => {
             const errorFile = config?.ssrFiles?.error ?? 'error.txt';
             const expectedFile = config?.ssrFiles?.expected ?? 'expected.html';
 
@@ -72,10 +72,10 @@ describe('fixtures', async () => {
                     dirname,
                 });
             } catch (err: any) {
-                return await validate({
+                return {
                     [errorFile]: err.message,
                     [expectedFile]: '',
-                });
+                };
             }
 
             const module = (await import(compiledFixturePath)) as FixtureModule;
@@ -88,22 +88,22 @@ describe('fixtures', async () => {
                     config?.props ?? {}
                 );
             } catch (err: any) {
-                return await validate({
+                return {
                     [errorFile]: err.message,
                     [expectedFile]: '',
-                });
+                };
             }
 
             try {
-                return await validate({
+                return {
                     [errorFile]: '',
                     [expectedFile]: formatHTML(result),
-                });
+                };
             } catch (_err: any) {
-                return await validate({
+                return {
                     [errorFile]: `Test helper could not format HTML:\n\n${result}`,
                     [expectedFile]: '',
-                });
+                };
             }
         }
     );

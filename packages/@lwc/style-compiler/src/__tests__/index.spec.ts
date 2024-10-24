@@ -34,7 +34,7 @@ describe('fixtures', async () => {
             root: path.resolve(__dirname, 'fixtures'),
             pattern: '**/actual.css',
         },
-        ({ src, config, filename }, validate) => {
+        ({ src, config, filename }) => {
             let result: { code: string } | undefined;
             let error: string | undefined;
 
@@ -50,10 +50,10 @@ describe('fixtures', async () => {
                 code = code.replace(new RegExp(LWC_VERSION.replace(/\./g, '\\.'), 'g'), 'X.X.X');
             }
 
-            return validate({
+            return {
                 'expected.js': code,
                 'error.json': error,
-            });
+            };
         }
     );
 });
