@@ -6,23 +6,27 @@
  */
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-
-import { rollup, type RollupLog } from 'rollup';
+import { rolldown } from 'rolldown';
 import lwc from '../../index';
 
 describe('rootDir', () => {
     it('warns if an "input" array is passed and when "rootDir" is not set', async () => {
         const warnings: any = [];
 
-        await rollup({
+        const a = await rolldown({
             input: [
                 path.resolve(__dirname, 'fixtures/entryA.js'),
                 path.resolve(__dirname, 'fixtures/entryB.js'),
             ],
             plugins: [lwc()],
+            shimMissingExports: true,
             onwarn(warning) {
                 warnings.push(warning);
             },
+        });
+
+        await a.generate({
+            format: 'esm',
         });
 
         expect(warnings).toHaveLength(1);
@@ -36,17 +40,23 @@ describe('rootDir', () => {
     });
 
     it('warns if an "input" object is passed and when "rootDir" is not set', async () => {
-        const warnings: RollupLog[] = [];
+        const warnings: any[] = [];
 
-        await rollup({
+        const a = await rolldown({
             input: {
                 entryA: path.resolve(__dirname, 'fixtures/entryA.js'),
                 entryB: path.resolve(__dirname, 'fixtures/entryB.js'),
             },
             plugins: [lwc()],
-            onwarn(warning) {
+            logLevel: 'warn',
+            shimMissingExports: true,
+            onwarn: (warning) => {
                 warnings.push(warning);
             },
+        });
+
+        await a.generate({
+            format: 'esm',
         });
 
         expect(warnings).toHaveLength(1);

@@ -1,0 +1,317 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`enableStaticContentOptimization: > 'false' 1`] = `
+{
+  "bundle": RolldownBuild {},
+  "output": {
+    "output": [
+      {
+        "code": "import { LightningElement, freezeTemplate, registerComponent as _registerComponent, registerTemplate } from "lwc";
+
+//#region @lwc/resources/empty_css.css
+var default$1 = void 0;
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html
+const stc0 = {
+	attrs: {
+		"src": "http://example.com/img.png",
+		"crossorigin": "anonymous"
+	},
+	key: 0
+};
+function tmpl($api, $cmp, $slotset, $ctx) {
+	const { h: api_element } = $api;
+	return [api_element("img", stc0)];
+}
+var basic_default$1 = registerTemplate(tmpl);
+tmpl.stylesheets = [];
+tmpl.stylesheetToken = "lwc-5cogeta2bli";
+tmpl.legacyStylesheetToken = "fixtures-basic_basic";
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+freezeTemplate(tmpl);
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js
+const __lwc_component_class_internal = _registerComponent(class extends LightningElement {}, {
+	tmpl: basic_default$1,
+	sel: "fixtures-basic",
+	apiVersion: 63
+});
+var basic_default = __lwc_component_class_internal;
+
+//#endregion
+export { basic_default as default };",
+        "dynamicImports": [],
+        "exports": [
+          "default",
+        ],
+        "facadeModuleId": "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        "fileName": "basic.js",
+        "imports": [],
+        "isDynamicEntry": false,
+        "isEntry": true,
+        "map": null,
+        "moduleIds": [
+          "@lwc/resources/empty_css.css",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        ],
+        "modules": {
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html": {},
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js": {},
+          "@lwc/resources/empty_css.css": {},
+        },
+        "name": "basic",
+        "preliminaryFileName": "basic.js",
+        "sourcemapFileName": null,
+        "type": "chunk",
+      },
+      {
+        "fileName": "basic.css",
+        "name": undefined,
+        "originalFileName": null,
+        "source": "export default undefined
+",
+        "type": "asset",
+      },
+    ],
+  },
+  "warnings": [],
+}
+`;
+
+exports[`enableStaticContentOptimization: > 'true' 1`] = `
+{
+  "bundle": RolldownBuild {},
+  "output": {
+    "output": [
+      {
+        "code": "import { LightningElement, freezeTemplate, parseFragment, registerComponent as _registerComponent, registerTemplate } from "lwc";
+
+//#region @lwc/resources/empty_css.css
+var default$1 = void 0;
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html
+const $fragment1 = parseFragment\`<img src="http://example.com/img.png" crossorigin="anonymous"\${3}>\`;
+function tmpl($api, $cmp, $slotset, $ctx) {
+	const { st: api_static_fragment } = $api;
+	return [api_static_fragment($fragment1, 1)];
+}
+var basic_default$1 = registerTemplate(tmpl);
+tmpl.stylesheets = [];
+tmpl.stylesheetToken = "lwc-5cogeta2bli";
+tmpl.legacyStylesheetToken = "fixtures-basic_basic";
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+freezeTemplate(tmpl);
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js
+const __lwc_component_class_internal = _registerComponent(class extends LightningElement {}, {
+	tmpl: basic_default$1,
+	sel: "fixtures-basic",
+	apiVersion: 63
+});
+var basic_default = __lwc_component_class_internal;
+
+//#endregion
+export { basic_default as default };",
+        "dynamicImports": [],
+        "exports": [
+          "default",
+        ],
+        "facadeModuleId": "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        "fileName": "basic.js",
+        "imports": [],
+        "isDynamicEntry": false,
+        "isEntry": true,
+        "map": null,
+        "moduleIds": [
+          "@lwc/resources/empty_css.css",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        ],
+        "modules": {
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html": {},
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js": {},
+          "@lwc/resources/empty_css.css": {},
+        },
+        "name": "basic",
+        "preliminaryFileName": "basic.js",
+        "sourcemapFileName": null,
+        "type": "chunk",
+      },
+      {
+        "fileName": "basic.css",
+        "name": undefined,
+        "originalFileName": null,
+        "source": "export default undefined
+",
+        "type": "asset",
+      },
+    ],
+  },
+  "warnings": [],
+}
+`;
+
+exports[`enableStaticContentOptimization: > 'undefined' 1`] = `
+{
+  "bundle": RolldownBuild {},
+  "output": {
+    "output": [
+      {
+        "code": "import { LightningElement, freezeTemplate, registerComponent as _registerComponent, registerTemplate } from "lwc";
+
+//#region @lwc/resources/empty_css.css
+var default$1 = void 0;
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html
+const stc0 = {
+	attrs: {
+		"src": "http://example.com/img.png",
+		"crossorigin": "anonymous"
+	},
+	key: 0
+};
+function tmpl($api, $cmp, $slotset, $ctx) {
+	const { h: api_element } = $api;
+	return [api_element("img", stc0)];
+}
+var basic_default$1 = registerTemplate(tmpl);
+tmpl.stylesheets = [];
+tmpl.stylesheetToken = "lwc-5cogeta2bli";
+tmpl.legacyStylesheetToken = "fixtures-basic_basic";
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+freezeTemplate(tmpl);
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js
+const __lwc_component_class_internal = _registerComponent(class extends LightningElement {}, {
+	tmpl: basic_default$1,
+	sel: "fixtures-basic",
+	apiVersion: 63
+});
+var basic_default = __lwc_component_class_internal;
+
+//#endregion
+export { basic_default as default };",
+        "dynamicImports": [],
+        "exports": [
+          "default",
+        ],
+        "facadeModuleId": "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        "fileName": "basic.js",
+        "imports": [],
+        "isDynamicEntry": false,
+        "isEntry": true,
+        "map": null,
+        "moduleIds": [
+          "@lwc/resources/empty_css.css",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        ],
+        "modules": {
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html": {},
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js": {},
+          "@lwc/resources/empty_css.css": {},
+        },
+        "name": "basic",
+        "preliminaryFileName": "basic.js",
+        "sourcemapFileName": null,
+        "type": "chunk",
+      },
+      {
+        "fileName": "basic.css",
+        "name": undefined,
+        "originalFileName": null,
+        "source": "export default undefined
+",
+        "type": "asset",
+      },
+    ],
+  },
+  "warnings": [],
+}
+`;
+
+exports[`enableStaticContentOptimization: > 'unspecified' 1`] = `
+{
+  "bundle": RolldownBuild {},
+  "output": {
+    "output": [
+      {
+        "code": "import { LightningElement, freezeTemplate, parseFragment, registerComponent as _registerComponent, registerTemplate } from "lwc";
+
+//#region @lwc/resources/empty_css.css
+var default$1 = void 0;
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html
+const $fragment1 = parseFragment\`<img src="http://example.com/img.png" crossorigin="anonymous"\${3}>\`;
+function tmpl($api, $cmp, $slotset, $ctx) {
+	const { st: api_static_fragment } = $api;
+	return [api_static_fragment($fragment1, 1)];
+}
+var basic_default$1 = registerTemplate(tmpl);
+tmpl.stylesheets = [];
+tmpl.stylesheetToken = "lwc-5cogeta2bli";
+tmpl.legacyStylesheetToken = "fixtures-basic_basic";
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+if (default$1) tmpl.stylesheets.push.apply(tmpl.stylesheets, default$1);
+freezeTemplate(tmpl);
+
+//#endregion
+//#region packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js
+const __lwc_component_class_internal = _registerComponent(class extends LightningElement {}, {
+	tmpl: basic_default$1,
+	sel: "fixtures-basic",
+	apiVersion: 63
+});
+var basic_default = __lwc_component_class_internal;
+
+//#endregion
+export { basic_default as default };",
+        "dynamicImports": [],
+        "exports": [
+          "default",
+        ],
+        "facadeModuleId": "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        "fileName": "basic.js",
+        "imports": [],
+        "isDynamicEntry": false,
+        "isEntry": true,
+        "map": null,
+        "moduleIds": [
+          "@lwc/resources/empty_css.css",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html",
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js",
+        ],
+        "modules": {
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.html": {},
+          "/Users/cardoso/Documents/salesforce/lwc/packages/@lwc/rollup-plugin/src/__tests__/enableStaticContentOptimization/fixtures/basic/basic.js": {},
+          "@lwc/resources/empty_css.css": {},
+        },
+        "name": "basic",
+        "preliminaryFileName": "basic.js",
+        "sourcemapFileName": null,
+        "type": "chunk",
+      },
+      {
+        "fileName": "basic.css",
+        "name": undefined,
+        "originalFileName": null,
+        "source": "export default undefined
+",
+        "type": "asset",
+      },
+    ],
+  },
+  "warnings": [],
+}
+`;

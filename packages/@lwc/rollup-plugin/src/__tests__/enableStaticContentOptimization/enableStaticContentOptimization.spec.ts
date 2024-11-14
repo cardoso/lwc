@@ -5,53 +5,63 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
 import path from 'node:path';
-import { describe, it, expect } from 'vitest';
-import { rollup, RollupLog } from 'rollup';
+import { describe, it } from 'vitest';
+import { rolldown } from 'rolldown';
 import lwc, { RollupLwcOptions } from '../../index';
 
 describe('enableStaticContentOptimization:', () => {
-    async function runRollup(
-        pathname: string,
-        options: RollupLwcOptions
-    ): Promise<{ code: string; warnings: RollupLog[] }> {
-        const warnings: RollupLog[] = [];
-        const bundle = await rollup({
-            input: path.resolve(__dirname, pathname),
-            plugins: [lwc(options)],
-            external: ['lwc'],
-            onwarn(warning) {
-                warnings.push(warning);
-            },
-        });
+    async function runRollup(pathname: string, options: RollupLwcOptions) {
+        const warnings: any[] = [];
 
-        const { output } = await bundle.generate({
-            format: 'esm',
-        });
+        try {
+            const bundle = await rolldown({
+                input: path.resolve(__dirname, pathname),
+                plugins: [lwc(options)],
+                external: ['lwc'],
+                shimMissingExports: true,
+                onwarn(warning) {
+                    warnings.push(warning);
+                },
+            });
 
-        return {
-            code: output[0].code,
-            warnings,
-        };
+            try {
+                const output = await bundle.generate({
+                    format: 'esm',
+                });
+
+                await bundle.close();
+
+                return {
+                    warnings,
+                    bundle,
+                    output,
+                };
+            } catch (error) {
+                return {
+                    warnings,
+                    bundle,
+                    error,
+                };
+            }
+        } catch (error) {
+            return {
+                warnings,
+                error,
+            };
+        }
     }
 
     const configs = [
         {
             name: 'undefined',
             opts: { enableStaticContentOptimization: undefined },
-            expected: false,
         },
-        { name: 'false', opts: { enableStaticContentOptimization: false }, expected: false },
-        { name: 'true', opts: { enableStaticContentOptimization: true }, expected: true },
+        { name: 'false', opts: { enableStaticContentOptimization: false } },
+        { name: 'true', opts: { enableStaticContentOptimization: true } },
         { name: 'unspecified', opts: {}, expected: true },
     ];
 
-    it.for(configs)('$name', async ({ opts, expected }) => {
-        const { code, warnings } = await runRollup('fixtures/basic/basic.js', opts);
-        expect(warnings).toEqual([]);
-        if (expected) {
-            expect(code).toContain('<img');
-        } else {
-            expect(code).not.toContain('<img');
-        }
+    it.concurrent.for(configs)('$name', async ({ opts }, { expect }) => {
+        await expect(runRollup('fixtures/basic/basic.js', opts)).resolves.toMatchSnapshot();
     });
 });

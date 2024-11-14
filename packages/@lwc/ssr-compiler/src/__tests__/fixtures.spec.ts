@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 import { vi, describe } from 'vitest';
-import { rollup } from 'rollup';
+import { rolldown } from 'rolldown';
 import lwcRollupPlugin from '@lwc/rollup-plugin';
 import { FeatureFlagName } from '@lwc/features/dist/types';
 import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
@@ -44,9 +44,10 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
     const modulesDir = path.resolve(dirname, './modules');
     const outputFile = path.resolve(dirname, './dist/compiled-experimental-ssr.js');
 
-    const bundle = await rollup({
+    const bundle = await rolldown({
         input,
         external: ['lwc', '@lwc/ssr-runtime', 'vitest'],
+        platform: 'node',
         plugins: [
             lwcRollupPlugin({
                 targetSSR: true,
@@ -55,8 +56,9 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
                 // TODO [#3331]: remove usage of lwc:dynamic in 246
                 experimentalDynamicDirective: true,
                 modules: [{ dir: modulesDir }],
-            }),
+            }) as any,
         ],
+        shimMissingExports: true,
         onwarn({ message, code, names }) {
             if (code === 'CIRCULAR_DEPENDENCY') {
                 return;

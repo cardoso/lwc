@@ -8,11 +8,11 @@ import fs from 'fs';
 import path from 'path';
 import { URLSearchParams } from 'url';
 
-import { Plugin, SourceMapInput, RollupLog } from 'rollup';
-import pluginUtils, { FilterPattern } from '@rollup/pluginutils';
 import { transformSync, StylesheetConfig, DynamicImportConfig } from '@lwc/compiler';
 import { resolveModule, ModuleRecord, RegistryType } from '@lwc/module-resolver';
 import { APIVersion, getAPIVersionFromNumber } from '@lwc/shared';
+import { type FilterPattern, createFilter, addExtension } from '@rollup/pluginutils';
+import type { SourceMapInput, RollupLog, Plugin } from 'rolldown';
 import type { CompilerDiagnostic } from '@lwc/errors';
 import type { CompilationMode } from '@lwc/ssr-compiler';
 
@@ -156,7 +156,7 @@ function transformWarningToRollupLog(
  * @returns LWC rollup plugin
  */
 export default function lwc(pluginOptions: RollupLwcOptions = {}): Plugin {
-    const filter = pluginUtils.createFilter(pluginOptions.include, pluginOptions.exclude);
+    const filter = createFilter(pluginOptions.include, pluginOptions.exclude);
 
     let { rootDir, modules = [] } = pluginOptions;
     const {
@@ -222,10 +222,7 @@ export default function lwc(pluginOptions: RollupLwcOptions = {}): Plugin {
                     );
                     // importeeAbsPath will contain query params because they are attached to importeeExt.
                     // ex: myfile.scoped.css?scoped=true
-                    const importeeAbsPath = pluginUtils.addExtension(
-                        importeeResolvedPath,
-                        importeeExt
-                    );
+                    const importeeAbsPath = addExtension(importeeResolvedPath, importeeExt);
 
                     // remove query params
                     const { filename: importeeNormalizedFilename } =

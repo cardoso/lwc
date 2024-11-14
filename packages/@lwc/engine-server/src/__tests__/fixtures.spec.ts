@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 import { vi, describe } from 'vitest';
-import { rollup } from 'rollup';
+import { rolldown } from 'rolldown';
 import lwcRollupPlugin, { RollupLwcOptions } from '@lwc/rollup-plugin';
 import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
 import type * as lwc from '../index';
@@ -51,7 +51,7 @@ async function compileFixture({
     const modulesDir = path.resolve(dirname, './modules');
     const outputFile = path.resolve(dirname, `./dist/compiled-${optionsAsString}.js`);
 
-    const bundle = await rollup({
+    const bundle = await rolldown({
         input,
         external: ['lwc', 'vitest'],
         plugins: [
@@ -63,8 +63,9 @@ async function compileFixture({
                     },
                 ],
                 ...options,
-            }),
+            }) as any,
         ],
+        shimMissingExports: true,
         onwarn({ message, code }) {
             // TODO [#3331]: The existing lwc:dynamic fixture test will generate warnings that can be safely suppressed.
             const shouldIgnoreWarning =

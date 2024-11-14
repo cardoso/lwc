@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { describe, beforeAll, test, expect } from 'vitest';
-import { rollup } from 'rollup';
+import { rolldown } from 'rolldown';
 import lwcRollupPlugin from '@lwc/rollup-plugin';
 import { renderComponent } from '../index';
 
@@ -27,14 +27,15 @@ async function compileComponent({
         await fs.writeFile(filename, content, 'utf-8');
     }
 
-    const bundle = await rollup({
+    const bundle = await rolldown({
         input: path.resolve(modulesDir, input),
         external: ['lwc', '@lwc/ssr-runtime'],
+        shimMissingExports: true,
         plugins: [
             lwcRollupPlugin({
                 targetSSR: true,
                 modules: [{ dir: modulesDir }],
-            }),
+            }) as any,
         ],
     });
 
