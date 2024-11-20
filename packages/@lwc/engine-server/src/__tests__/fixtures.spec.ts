@@ -6,18 +6,11 @@
  */
 /// <reference types="vite/client" />
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import { vi, test, beforeAll, describe } from 'vitest';
 import { rollup, type InputOption, type RollupCache } from 'rollup';
 import lwcRollupPlugin, { type RollupLwcOptions } from '@lwc/rollup-plugin';
 import { formatHTML } from '@lwc/test-utils-lwc-internals';
 import * as lwc from '../index';
-// import { rollup } from 'rollup';
-// import lwcRollupPlugin from '@lwc/rollup-plugin';
-// import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
-// import { setFeatureFlagForTest } from '../index';
-// import type { RollupLwcOptions } from '@lwc/rollup-plugin';
-// import type * as lwc from '../index';
 
 vi.mock(import('@lwc/module-resolver'), async (importOriginal) => {
     const mod = await importOriginal();
@@ -102,9 +95,6 @@ describe.concurrent.each(cases)('%s', (suite, options) => {
             generatedCode: 'es2015',
             entryFileNames: '[name]',
         });
-        return async () => {
-            await fs.rm(dir, { recursive: true, force: true });
-        };
     });
 
     test.for(fixtures)('%s', { concurrent: true }, async (fixture, { expect }) => {
