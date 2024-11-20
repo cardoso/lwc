@@ -4,14 +4,36 @@
  * SPDX-License-Identifier: MIT
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
-
 import path from 'node:path';
-import { vi, describe } from 'vitest';
+import { vi, test, beforeAll, describe } from 'vitest';
 import { rollup } from 'rollup';
-import lwcRollupPlugin from '@lwc/rollup-plugin';
-import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
-import type { RollupLwcOptions } from '@lwc/rollup-plugin';
-import type * as lwc from '../index';
+import lwcRollupPlugin, { type RollupLwcOptions } from '@lwc/rollup-plugin';
+import { glob } from 'glob';
+import { formatHTML } from '@lwc/test-utils-lwc-internals';
+import * as lwc from '../index';
+
+vi.mock(import('@lwc/module-resolver'), async (importOriginal) => {
+    const mod = await importOriginal();
+    return {
+        ...mod,
+        resolveModule(importee, importer, ..._) {
+            const dirname = path.dirname(importer);
+            return mod.resolveModule(importee, dirname, {
+                modules: [
+                    { npm: '@lwc/engine-dom' },
+                    { npm: '@lwc/synthetic-shadow' },
+                    { npm: '@lwc/wire-service' },
+                    {
+                        dir: dirname.includes('/modules/')
+                            ? path.resolve(dirname, '../..')
+                            : path.join(dirname, 'modules'),
+                    },
+                ],
+                rootDir: dirname,
+            });
+        },
+    };
+});
 
 interface FixtureModule {
     tagName: string;
@@ -20,53 +42,38 @@ interface FixtureModule {
     features?: any[];
 }
 
-vi.setConfig({ testTimeout: 10_000 /* 10 seconds */ });
-
-vi.mock('lwc', async () => {
-    const lwcEngineServer = await import('../index');
-    try {
-        lwcEngineServer.setHooks({
-            sanitizeHtmlContent(content: unknown) {
-                return content as string;
-            },
-        });
-    } catch (_err) {
-        // Ignore error if the hook is already overridden
-    }
-    return lwcEngineServer;
+lwc.setHooks({
+    sanitizeHtmlContent(content: unknown) {
+        return String(content);
+    },
 });
 
-async function compileFixture({
-    input,
-    dirname,
-    options,
-}: {
-    input: string;
-    dirname: string;
-    options?: RollupLwcOptions;
-}) {
-    const optionsAsString =
-        Object.entries(options ?? {})
-            .map(([key, value]) => `${key}=${value}`)
-            .join('-') || 'default';
-    const modulesDir = path.resolve(dirname, './modules');
-    const outputFile = path.resolve(dirname, `./dist/compiled-${optionsAsString}.js`);
+vi.mock('lwc', () => {
+    return lwc;
+});
 
+async function compileFixtures(
+    {
+        input,
+        dir,
+    }: {
+        input: string[] | Record<string, string>;
+        dir: string;
+    },
+    options: RollupLwcOptions = {}
+) {
+    const loader = path.join(__dirname, './utils/custom-loader.js');
     const bundle = await rollup({
         input,
-        external: ['lwc', 'vitest'],
+        external: ['lwc', 'vitest', loader],
         plugins: [
             lwcRollupPlugin({
+                rootDir: '.',
                 enableDynamicComponents: true,
                 experimentalDynamicComponent: {
-                    loader: path.join(__dirname, './utils/custom-loader.js'),
+                    loader,
                     strictSpecifier: false,
                 },
-                modules: [
-                    {
-                        dir: modulesDir,
-                    },
-                ],
                 ...options,
             }),
         ],
@@ -87,74 +94,73 @@ async function compileFixture({
     });
 
     await bundle.write({
-        file: outputFile,
+        dir,
         format: 'esm',
         exports: 'named',
+        generatedCode: 'es2015',
     });
-
-    return outputFile;
 }
 
-function testFixtures(options?: RollupLwcOptions) {
-    testFixtureDir(
-        {
-            root: path.resolve(__dirname, 'fixtures'),
-            pattern: '**/index.js',
-        },
-        async ({ filename, dirname, config }) => {
-            const compiledFixturePath = await compileFixture({
-                input: filename,
-                dirname,
-                options,
-            });
+const fixtureDir = path.resolve(__dirname, `./fixtures`);
+const fixtures = glob.sync('**/index.js', {
+    ignore: ['**/dist/**'],
+    cwd: fixtureDir,
+});
 
-            // The LWC engine holds global state like the current VM index, which has an impact on
-            // the generated HTML IDs. So the engine has to be re-evaluated between tests.
-            // On top of this, the engine also checks if the component constructor is an instance of
-            // the LightningElement. Therefor the compiled module should also be evaluated in the
-            // same sandbox registry as the engine.
-            const lwcEngineServer = await import('../index');
-            const module = (await import(compiledFixturePath)) as FixtureModule;
+const input = Object.fromEntries(fixtures.map((f) => [f, path.resolve(fixtureDir, f)]));
 
-            const features = module!.features ?? [];
-            features.forEach((flag) => {
-                lwcEngineServer!.setFeatureFlagForTest(flag, true);
-            });
+const cases = {
+    default: {},
+    'enableStaticContentOptimization=false': { enableStaticContentOptimization: false },
+} as const;
 
-            let result;
-            let err;
-            try {
-                result = lwcEngineServer!.renderComponent(
-                    module!.tagName,
-                    module!.default,
-                    config?.props ?? {}
-                );
-            } catch (_err: any) {
-                if (_err.name === 'AssertionError') {
-                    throw _err;
-                }
-                err = _err.message;
-            }
+describe.concurrent.each(Object.entries(cases))('%s', (name, options) => {
+    const dir = path.resolve(__dirname, `./dist/${name}`);
 
-            features.forEach((flag) => {
-                lwcEngineServer!.setFeatureFlagForTest(flag, false);
-            });
-
-            return {
-                'expected.html': result ? formatHTML(result) : '',
-                'error.txt': err ?? '',
-            };
-        }
-    );
-}
-
-describe.concurrent('fixtures', () => {
-    describe.concurrent('default', () => {
-        testFixtures();
+    beforeAll(async () => {
+        await compileFixtures({ input, dir }, options);
     });
 
-    // Test with and without the static content optimization to ensure the fixtures are the same
-    describe.concurrent('enableStaticContentOptimization=false', () => {
-        testFixtures({ enableStaticContentOptimization: false });
+    test.for(fixtures)('%s', { concurrent: true }, async (fixture, { expect }) => {
+        const dirname = path.dirname(fixture);
+        const mod: FixtureModule = await import(`${dir}/${fixture}`);
+        const { expected, error } = await renderFixture(mod, dirname);
+
+        await Promise.all([
+            expect(formatHTML(expected)).toMatchFileSnapshot(`./fixtures/${dirname}/expected.html`),
+            expect(error).toMatchFileSnapshot(`./fixtures/${dirname}/error.txt`),
+        ]);
     });
 });
+
+async function renderFixture(mod: FixtureModule, dirname: string) {
+    const result = { error: '', expected: '' };
+
+    mod.features?.forEach((f) => {
+        lwc.setFeatureFlagForTest(f, true);
+    });
+
+    let config = { props: mod.props };
+
+    try {
+        config = await import(`./fixtures/${dirname}/config.json`);
+    } catch (_error) {
+        // ignore missing config
+    }
+
+    try {
+        result.expected = lwc.renderComponent(mod.tagName, mod.default, config.props);
+    } catch (_error: any) {
+        if (_error.name === 'AssertionError') {
+            throw _error;
+        } else {
+            result.error = _error.message;
+        }
+    }
+
+    mod.features?.forEach((f) => {
+        lwc.setFeatureFlagForTest(f, false);
+    });
+
+    return result;
+}
