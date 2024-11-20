@@ -6,8 +6,9 @@
  */
 /// <reference types="vite/client" />
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { vi, test, beforeAll, describe } from 'vitest';
-import { rollup } from 'rollup';
+import { rollup, type InputOption, type RollupCache } from 'rollup';
 import lwcRollupPlugin, { type RollupLwcOptions } from '@lwc/rollup-plugin';
 import { formatHTML } from '@lwc/test-utils-lwc-internals';
 import * as lwc from '../index';
@@ -55,20 +56,70 @@ vi.mock('lwc', () => {
     return lwc;
 });
 
-async function compileFixtures(
-    {
-        input,
-        dir,
-    }: {
-        input: string[] | Record<string, string>;
-        dir: string;
-    },
-    options: RollupLwcOptions = {}
-) {
+let cache: RollupCache | undefined;
+
+const fixtures = Object.keys(
+    // @ts-expect-error import.meta
+    import.meta.glob<string>('./fixtures/**/index.js', {
+        query: '?url',
+        eager: true,
+        import: 'default',
+    })
+);
+
+const configs =
+    // @ts-expect-error import.meta
+    import.meta.glob<FixtureConfig>('./fixtures/**/config.json', {
+        eager: true,
+        import: 'default',
+    });
+
+const input = Object.fromEntries(
+    fixtures.map((f) => [f.replace('./', ''), path.resolve(__dirname, f)])
+);
+
+const config = {
+    default: {},
+    'enableStaticContentOptimization=false': { enableStaticContentOptimization: false },
+} as const;
+
+const cases = Object.entries(config);
+
+describe.concurrent.each(cases)('%s', (suite, options) => {
+    const dir = path.join(__dirname, `dist/${suite}`);
+    beforeAll(async () => {
+        const bundle = await bundleFixtures(input, options);
+        await bundle.write({
+            dir,
+            format: 'esm',
+            exports: 'named',
+            generatedCode: 'es2015',
+            entryFileNames: '[name]',
+        });
+        return async () => {
+            await fs.rm(dir, { recursive: true, force: true });
+        };
+    });
+
+    test.for(fixtures)('%s', { concurrent: true }, async (fixture, { expect }) => {
+        const dirname = path.dirname(fixture);
+        const mod: FixtureModule = await import(`${dir}/${fixture}`);
+        const { expected, error } = renderFixture(mod, configs[`${dirname}/config.json`]);
+
+        await Promise.all([
+            expect(formatHTML(expected)).toMatchFileSnapshot(`${dirname}/expected.html`),
+            expect(error).toMatchFileSnapshot(`${dirname}/error.txt`),
+        ]);
+    });
+});
+
+async function bundleFixtures(input: InputOption, options: RollupLwcOptions) {
     const loader = path.join(__dirname, './utils/custom-loader.js');
+
     const bundle = await rollup({
         input,
         external: ['lwc', 'vitest', loader],
+        cache,
         plugins: [
             lwcRollupPlugin({
                 rootDir: '.',
@@ -96,57 +147,12 @@ async function compileFixtures(
         },
     });
 
-    await bundle.write({
-        dir,
-        format: 'esm',
-        exports: 'named',
-        generatedCode: 'es2015',
-    });
+    if (bundle.cache) {
+        cache = bundle.cache;
+    }
+
+    return bundle;
 }
-
-const fixtures = Object.keys(
-    // @ts-expect-error import.meta
-    import.meta.glob<string>('./fixtures/**/index.js', {
-        query: '?url',
-        eager: true,
-        import: 'default',
-    })
-);
-
-const configs =
-    // @ts-expect-error import.meta
-    import.meta.glob<FixtureConfig>('./fixtures/**/config.json', {
-        eager: true,
-        import: 'default',
-    });
-
-const input = Object.fromEntries(
-    fixtures.map((f) => [f.replace('./', ''), path.resolve(__dirname, f)])
-);
-
-const cases = {
-    default: {},
-    'enableStaticContentOptimization=false': { enableStaticContentOptimization: false },
-} as const;
-
-describe.concurrent.each(Object.entries(cases))('%s', (name, options) => {
-    const dir = path.resolve(__dirname, `./dist/${name}`);
-
-    beforeAll(async () => {
-        await compileFixtures({ input, dir }, options);
-    });
-
-    test.for(fixtures)('%s', { concurrent: true }, async (fixture, { expect }) => {
-        const dirname = path.dirname(fixture);
-        const mod: FixtureModule = await import(`./dist/${name}/${fixture}`);
-        const { expected, error } = renderFixture(mod, configs[`${dirname}/config.json`]);
-
-        await Promise.all([
-            expect(formatHTML(expected)).toMatchFileSnapshot(`${dirname}/expected.html`),
-            expect(error).toMatchFileSnapshot(`${dirname}/error.txt`),
-        ]);
-    });
-});
 
 function renderFixture(mod: FixtureModule, config?: FixtureConfig) {
     const result = { error: '', expected: '' };
