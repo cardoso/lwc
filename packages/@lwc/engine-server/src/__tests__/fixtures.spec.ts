@@ -12,6 +12,12 @@ import { rollup, type InputOption, type RollupCache } from 'rollup';
 import lwcRollupPlugin, { type RollupLwcOptions } from '@lwc/rollup-plugin';
 import { formatHTML } from '@lwc/test-utils-lwc-internals';
 import * as lwc from '../index';
+// import { rollup } from 'rollup';
+// import lwcRollupPlugin from '@lwc/rollup-plugin';
+// import { testFixtureDir, formatHTML } from '@lwc/test-utils-lwc-internals';
+// import { setFeatureFlagForTest } from '../index';
+// import type { RollupLwcOptions } from '@lwc/rollup-plugin';
+// import type * as lwc from '../index';
 
 vi.mock(import('@lwc/module-resolver'), async (importOriginal) => {
     const mod = await importOriginal();
@@ -156,7 +162,7 @@ async function bundleFixtures(input: InputOption, options: RollupLwcOptions) {
 
 function renderFixture(mod: FixtureModule, config?: FixtureConfig) {
     const result = { error: '', expected: '' };
-
+    lwc.setFeatureFlagForTest('ENABLE_WIRE_SYNC_EMIT', true);
     mod.features?.forEach((f) => {
         lwc.setFeatureFlagForTest(f, true);
     });
@@ -174,6 +180,8 @@ function renderFixture(mod: FixtureModule, config?: FixtureConfig) {
     mod.features?.forEach((f) => {
         lwc.setFeatureFlagForTest(f, false);
     });
+
+    lwc.setFeatureFlagForTest('ENABLE_WIRE_SYNC_EMIT', false);
 
     return result;
 }
