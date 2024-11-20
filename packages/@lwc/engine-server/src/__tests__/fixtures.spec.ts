@@ -35,12 +35,15 @@ vi.mock(import('@lwc/module-resolver'), async (importOriginal) => {
     };
 });
 
-interface FixtureModule {
+type FixtureModule = {
     tagName: string;
     default: typeof lwc.LightningElement;
-    props?: { [key: string]: any };
     features?: any[];
-}
+};
+
+type FixtureConfig = {
+    props?: { [key: string]: any };
+};
 
 lwc.setHooks({
     sanitizeHtmlContent(content: unknown) {
@@ -101,7 +104,6 @@ async function compileFixtures(
     });
 }
 
-const fixtureDir = path.resolve(__dirname, `./fixtures`);
 const fixtures = Object.keys(
     // @ts-expect-error import.meta
     import.meta.glob<string>('./fixtures/**/index.js', {
@@ -109,9 +111,18 @@ const fixtures = Object.keys(
         eager: true,
         import: 'default',
     })
-).map((k) => k.replace('./fixtures/', ''));
+);
 
-const input = Object.fromEntries(fixtures.map((f) => [f, path.resolve(fixtureDir, f)]));
+const configs =
+    // @ts-expect-error import.meta
+    import.meta.glob<FixtureConfig>('./fixtures/**/config.json', {
+        eager: true,
+        import: 'default',
+    });
+
+const input = Object.fromEntries(
+    fixtures.map((f) => [f.replace('./', ''), path.resolve(__dirname, f)])
+);
 
 const cases = {
     default: {},
@@ -127,33 +138,25 @@ describe.concurrent.each(Object.entries(cases))('%s', (name, options) => {
 
     test.for(fixtures)('%s', { concurrent: true }, async (fixture, { expect }) => {
         const dirname = path.dirname(fixture);
-        const mod: FixtureModule = await import(`${dir}/${fixture}`);
-        const { expected, error } = await renderFixture(mod, dirname);
+        const mod: FixtureModule = await import(`./dist/${name}/${fixture}`);
+        const { expected, error } = renderFixture(mod, configs[`${dirname}/config.json`]);
 
         await Promise.all([
-            expect(formatHTML(expected)).toMatchFileSnapshot(`./fixtures/${dirname}/expected.html`),
-            expect(error).toMatchFileSnapshot(`./fixtures/${dirname}/error.txt`),
+            expect(formatHTML(expected)).toMatchFileSnapshot(`${dirname}/expected.html`),
+            expect(error).toMatchFileSnapshot(`${dirname}/error.txt`),
         ]);
     });
 });
 
-async function renderFixture(mod: FixtureModule, dirname: string) {
+function renderFixture(mod: FixtureModule, config?: FixtureConfig) {
     const result = { error: '', expected: '' };
 
     mod.features?.forEach((f) => {
         lwc.setFeatureFlagForTest(f, true);
     });
 
-    let config = { props: mod.props };
-
     try {
-        config = await import(`./fixtures/${dirname}/config.json`);
-    } catch (_error) {
-        // ignore missing config
-    }
-
-    try {
-        result.expected = lwc.renderComponent(mod.tagName, mod.default, config.props);
+        result.expected = lwc.renderComponent(mod.tagName, mod.default, config?.props);
     } catch (_error: any) {
         if (_error.name === 'AssertionError') {
             throw _error;
