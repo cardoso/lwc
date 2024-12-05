@@ -14,6 +14,11 @@ import type {
     Attribute as IrAttribute,
     Node as IrNode,
     Property as IrProperty,
+    Literal as IrLiteral,
+    Expression as IrExpression,
+    ComplexExpression as IrComplexExpression,
+    ElseBlock,
+    ElseifBlock,
 } from '@lwc/template-compiler';
 import type {
     Expression as EsExpression,
@@ -171,4 +176,12 @@ export function getChildAttrsOrProps(
         .filter(Boolean) as EsProperty[];
 
     return b.objectExpression(objectAttrsOrProps);
+}
+
+export function isLiteral(node: IrLiteral | IrExpression | IrComplexExpression): node is IrLiteral {
+    return node.type === 'Literal';
+}
+
+export function isElseBlock(node: ElseBlock | ElseifBlock): node is ElseBlock {
+    return node.type === 'ElseBlock';
 }

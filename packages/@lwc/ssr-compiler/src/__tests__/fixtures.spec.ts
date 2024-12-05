@@ -68,6 +68,7 @@ async function compileFixture({ input, dirname }: { input: string; dirname: stri
         file: outputFile,
         format: 'esm',
         exports: 'named',
+        compact: false,
     });
 
     return outputFile;
