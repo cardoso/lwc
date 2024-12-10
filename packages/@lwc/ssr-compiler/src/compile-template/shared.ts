@@ -15,10 +15,10 @@ import type {
     Node as IrNode,
     Property as IrProperty,
     Literal as IrLiteral,
-    Expression as IrExpression,
+    ElseBlock as IrElseBlock,
+    ElseifBlock as IrElseifBlock,
+    BaseNode as IrBaseNode,
     ComplexExpression as IrComplexExpression,
-    ElseBlock,
-    ElseifBlock,
 } from '@lwc/template-compiler';
 import type {
     Expression as EsExpression,
@@ -178,10 +178,16 @@ export function getChildAttrsOrProps(
     return b.objectExpression(objectAttrsOrProps);
 }
 
-export function isLiteral(node: IrLiteral | IrExpression | IrComplexExpression): node is IrLiteral {
-    return node.type === 'Literal';
+export function isLiteral(
+    node: IrBaseNode | IrLiteral | IrComplexExpression | undefined
+): node is IrLiteral {
+    return node?.type === 'Literal';
 }
 
-export function isElseBlock(node: ElseBlock | ElseifBlock): node is ElseBlock {
-    return node.type === 'ElseBlock';
+export function isElseBlock(node: IrNode | undefined): node is IrElseBlock {
+    return node?.type === 'ElseBlock';
+}
+
+export function isElseifBlock(node: IrNode | undefined): node is IrElseifBlock {
+    return node?.type === 'ElseifBlock';
 }

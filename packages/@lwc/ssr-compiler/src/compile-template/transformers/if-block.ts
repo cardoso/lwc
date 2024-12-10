@@ -7,11 +7,12 @@
 import { builders as b } from 'estree-toolkit';
 import { expressionIrToEs } from '../expression';
 import { irChildrenToEs } from '../ir-to-es';
-import { isElseBlock, optimizeAdjacentYieldStmts } from '../shared';
+import { isElseBlock, isElseifBlock, optimizeAdjacentYieldStmts } from '../shared';
 import type {
     ChildNode as IrChildNode,
     ElseifBlock as IrElseifBlock,
     IfBlock as IrIfBlock,
+    ElseBlock as IrElseBlock,
 } from '@lwc/template-compiler';
 import type { Transformer, TransformerContext } from '../types';
 import type { BlockStatement as EsBlockStatement, IfStatement as EsIfStatement } from 'estree';
@@ -24,22 +25,22 @@ function bIfStatement(
     ifElseIfNode: IrIfBlock | IrElseifBlock,
     cxt: TransformerContext
 ): EsIfStatement {
-    const { children, condition, else: elseNode } = ifElseIfNode;
-
-    let elseBlock = null;
-    if (elseNode) {
-        if (isElseBlock(elseNode)) {
-            elseBlock = bBlockStatement(elseNode.children, cxt);
-        } else {
-            elseBlock = bIfStatement(elseNode, cxt);
-        }
-    }
-
     return b.ifStatement(
-        expressionIrToEs(condition, cxt),
-        bBlockStatement(children, cxt),
-        elseBlock
+        expressionIrToEs(ifElseIfNode.condition, cxt),
+        bBlockStatement(ifElseIfNode.children, cxt),
+        bElseStatement(ifElseIfNode.else, cxt)
     );
+}
+
+function bElseStatement(
+    elseNode: IrElseifBlock | IrElseBlock | undefined,
+    cxt: TransformerContext
+) {
+    if (isElseBlock(elseNode)) {
+        return bBlockStatement(elseNode.children, cxt);
+    } else if (isElseifBlock(elseNode)) {
+        return bIfStatement(elseNode, cxt);
+    }
 }
 
 function bBlockStatement(childNodes: IrChildNode[], cxt: TransformerContext): EsBlockStatement {
