@@ -13,10 +13,10 @@ import { bWireAdaptersPlumbing } from './wire';
 
 import type {
     Program,
-    Statement,
     ExpressionStatement,
     IfStatement,
     FunctionDeclaration,
+    BlockStatement,
 } from 'estree';
 import type { ComponentMetaState } from './types';
 
@@ -44,7 +44,7 @@ const bGenerateMarkup = esTemplate`
         });
 
         __establishContextfulRelationship(contextfulParent, instance);
-        ${/*connect wire*/ is.statement}
+        ${/*connect wire*/ [is.blockStatement]}
 
         instance[__SYMBOL__SET_INTERNALS](props, attrs);
         instance.isConnected = true;
@@ -124,7 +124,7 @@ export function addGenerateMarkupFunction(
     }
 
     // If no wire adapters are detected on the component, we don't bother injecting the wire-related code.
-    let connectWireAdapterCode: Statement[] = [];
+    let connectWireAdapterCode: BlockStatement[] = [];
     if (state.wireAdapters.length) {
         connectWireAdapterCode = bWireAdaptersPlumbing(state.wireAdapters);
         program.body.unshift(bImportDeclaration({ connectContext: '__connectContext' }));

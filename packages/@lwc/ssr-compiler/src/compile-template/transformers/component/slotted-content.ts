@@ -12,7 +12,6 @@ import { esTemplate, esTemplateWithYield } from '../../../estemplate';
 import { irChildrenToEs, irToEs } from '../../ir-to-es';
 import { isLiteral } from '../../shared';
 import { expressionIrToEs } from '../../expression';
-import { isNullableOf } from '../../../estree/validators';
 import type { CallExpression as EsCallExpression, Expression as EsExpression } from 'estree';
 
 import type {
@@ -42,7 +41,7 @@ const bGenerateSlottedContent = esTemplateWithYield`
                 // is established between components rendered in slotted content & the "parent"
                 // component that contains the <slot>.
 
-                ${/* shadow slot content */ is.statement}
+                ${/* shadow slot content */ [is.statement]}
             } 
             // Avoid creating the object unnecessarily
             : null;
@@ -61,19 +60,26 @@ const bGenerateSlottedContent = esTemplateWithYield`
             }
         }
 
-        ${/* light DOM addLightContent statements */ is.expressionStatement}
-        ${/* scoped slot addLightContent statements */ is.expressionStatement}
+        ${/* light DOM addLightContent statements */ [is.expressionStatement]}
+        ${/* scoped slot addLightContent statements */ [is.expressionStatement]}
 `<EsStatement[]>;
 
 // Note that this function name (`generateSlottedContent`) does not need to be scoped even though
 // it may be repeated multiple times in the same scope, because it's a function _expression_ rather
 // than a function _declaration_, so it isn't available to be referenced anywhere.
 const bAddLightContent = esTemplate`
+    addLightContent(${/* slot name */ is.expression} ?? "", async function* generateSlottedContent(contextfulParent) {
+        // FIXME: make validation work again  
+        ${/* slot content */ [is.statement]}
+    });
+`<EsCallExpression>;
+
+const bAddLightContentScoped = esTemplate`
     addLightContent(${/* slot name */ is.expression} ?? "", async function* generateSlottedContent(contextfulParent, ${
-        /* scoped slot data variable */ isNullableOf(is.identifier)
+        /* scoped slot data variable */ is.identifier
     }) {
         // FIXME: make validation work again  
-        ${/* slot content */ false}
+        ${/* slot content */ [is.statement]}
     });
 `<EsCallExpression>;
 
@@ -151,7 +157,7 @@ function getLightSlottedContent(rootNodes: IrChildNode[], cxt: TransformerContex
         cxt.isSlotted = ancestorIndices.length > 1 || clone.type === 'Slot';
         const slotContent = irToEs(clone, cxt);
         cxt.isSlotted = originalIsSlotted;
-        results.push(b.expressionStatement(bAddLightContent(slotName, null, slotContent)));
+        results.push(b.expressionStatement(bAddLightContent(slotName, slotContent)));
     };
 
     const traverse = (nodes: IrChildNode[], ancestorIndices: number[]) => {
@@ -215,7 +221,7 @@ export function getSlottedContent(
 
         // TODO [#4768]: what if the bound variable is `generateMarkup` or some framework-specific identifier?
         const addLightContentExpr = b.expressionStatement(
-            bAddLightContent(slotName, boundVariable, irChildrenToEs(child.children, cxt))
+            bAddLightContentScoped(slotName, boundVariable, irChildrenToEs(child.children, cxt))
         );
         cxt.popLocalVars();
         return addLightContentExpr;

@@ -34,6 +34,7 @@ type ValidatorReference = number;
 /** A validator, validation opt-out, or reference to previously-used validator. */
 type ValidatorPlaceholder<T extends EsNode | null> =
     | Validator<T>
+    | [Validator<T>]
     | ValidatorReference
     | typeof NO_VALIDATION;
 
@@ -44,14 +45,22 @@ type ValidatedType<T> =
           // messes with the inferred type `V`, so we must check `Checker` explicitly
           T extends Checker<infer C>
             ? // estree validator
-              C | C[]
+              C
             : // custom validator
-              V | Array<NonNullable<V>> // avoid invalid `Array<V | null>`
-        : T extends typeof NO_VALIDATION
-          ? // no validation = broadest type possible
-            EsNode | EsNode[] | null
-          : // not a validator!
-            never;
+              V
+        : T extends [Validator<infer V>]
+          ? // estree's `Checker<T>` satisfies our `Validator<T>`, but has an extra overload that
+            // messes with the inferred type `V`, so we must check `Checker` explicitly
+            T extends [Checker<infer C>]
+              ? // estree validator
+                C[]
+              : // custom validator
+                V[] // avoid invalid `Array<V | null>`
+          : T extends typeof NO_VALIDATION
+            ? // no validation = broadest type possible
+              EsNode[] | EsNode | null
+            : // not a validator!
+              never;
 
 /**
  * Converts the validators and refs used in the template to the list of parameters required by the
@@ -155,10 +164,13 @@ function esTemplateImpl<Validators extends ValidatorPlaceholder<EsNode | null>[]
     for (let i = 1; i < javascriptSegments.length; i += 1) {
         const segment = javascriptSegments[i];
         const validator = validators[i - 1]; // always one less value than strings in template literals
-        if (typeof validator === 'function' || validator === NO_VALIDATION) {
+        if (typeof validator !== 'number') {
             // Template slot will be filled by a *new* argument passed to the generated function
             if (validator !== NO_VALIDATION) {
-                placeholderToValidator.set(placeholderCount, validator);
+                placeholderToValidator.set(
+                    placeholderCount,
+                    typeof validator === 'function' ? validator : validator[0]
+                );
             }
             parsableCode += `${PLACEHOLDER_PREFIX}${placeholderCount}`;
             placeholderCount += 1;

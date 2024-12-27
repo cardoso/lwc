@@ -15,7 +15,7 @@ import type {
     LwcComponent as IrLwcComponent,
     Expression as IrExpression,
 } from '@lwc/template-compiler';
-import type { Statement as EsStatement } from 'estree';
+import type { ExpressionStatement, IfStatement } from 'estree';
 
 const bYieldFromDynamicComponentConstructorGenerator = esTemplateWithYield`
     const Ctor = '${/* lwcIs attribute value */ is.expression}';
@@ -32,7 +32,7 @@ const bYieldFromDynamicComponentConstructorGenerator = esTemplateWithYield`
                 `shadowSlottedContent`/`lightSlottedContentMap` which are used below 
                 when the child's generateMarkup function is invoked.
             */
-            is.statement
+            [is.statement]
         }
 
         const scopeToken = hasScopedStylesheets ? stylesheetScopeToken : undefined;
@@ -48,7 +48,7 @@ const bYieldFromDynamicComponentConstructorGenerator = esTemplateWithYield`
             contextfulParent
         );
     }
-`<EsStatement[]>;
+`<[ExpressionStatement, IfStatement]>;
 
 export const LwcComponent: Transformer<IrLwcComponent> = function LwcComponent(node, cxt) {
     const { directives } = node;
